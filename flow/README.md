@@ -1,0 +1,915 @@
+# flow 流程與播放元件：ui-play、ui-stream、ui-contacts、ui-orbit
+
+以語意標籤撰寫的播放型元件，適合教學頁面與螢幕錄影。每個元件都是單一 `.js` 檔，載入後自動注入樣式，不使用 Shadow DOM。圖示使用 Bootstrap Icons，請在頁面上自行載入圖示字型。顏色屬性都可以直接寫色票名稱（例如 `key`、`bg-alternative`），也可以寫任何 CSS 顏色。
+
+| 檔案 | 標籤 | 用途 | 範例頁 |
+| --- | --- | --- | --- |
+| `ui-play.js` | `<ui-play>` `<stage-item>` `<script-item>` 與各種 `-fx` | 教學錄影用的模擬畫面播放器：在既有內容上依劇本標記、註解、蓋印章、改寫，鍵盤或滑鼠控制節奏。 | [`ui-play-demo-11-18-26.html`](ui-play-demo-11-18-26.html)（合併版：新範例在上，11-13、11-14 的範例與修改對照接在下方） |
+| `play-maker.js` | `<play-maker>` | ui-play 與 ui-fillin 的劇本製作器：貼上句子，選取文字按按鈕，自動產生錄影版與練習版程式碼。 | [`play-maker-demo-11-14-26.html`](play-maker-demo-11-14-26.html) |
+| `ui-stream.js` | `<ui-stream>` `<stream-role>` `<stream-item>` | 聊天室回放式的內容流，逐則出現、逐字打出、暫停後揭露答案；`mode="live"` 接收外部送進來的訊息；`layout` 切換平鋪、尾巴氣泡、雙欄對照排版；`stage` 在旁邊切出畫面區，逐則切換圖片或 template。 | [`ui-stream-demo-11-18-26.html`](ui-stream-demo-11-18-26.html)（合併版） |
+| `ui-stream-beyond.js` | `<stream-item avatar-glow>`、`<stream-item reveal-pause>`、`data-style="spot"`、`data-style="faint"` | ui-stream 的相依增強，不修改 `ui-stream.js`：單一則訊息的頭像光暈、reveal 顯示完再暫停一次，以及醒目與不醒目的泡泡樣式。 | [`ui-stream-beyond-demo-11-21-26.html`](ui-stream-beyond-demo-11-21-26.html) |
+| `ui-contacts.js` | `<ui-contacts>` `<p-card>` `<p-msg>` | 通訊錄：預先寫好人物與訊息，把人物拖到 ui-stream 產生他的下一則訊息，或拖到 ui-post 變成一則留言。 | [`ui-contacts-demo-11-15-26.html`](ui-contacts-demo-11-15-26.html)（範例 5：拖到 ui-post） |
+| `ui-orbit.js` | `<ui-orbit>` `<orbit-core>` `<orbit-item>` | 核心概念居中，相關想法沿軌道環繞；點一個想法，它會停進右側插槽並顯示說明。 | [`ui-orbit-demo-11-11-26.html`](ui-orbit-demo-11-11-26.html) |
+
+三個元件同時使用的範例：[`flow-trio-demo-11-11-26.html`](flow-trio-demo-11-11-26.html)。
+
+## 目錄
+
+- [ui-play.js](#ui-playjs)
+- [ui-stream.js](#ui-streamjs)
+- [ui-stream-beyond.js](#ui-stream-beyondjs)
+- [ui-contacts.js](#ui-contactsjs)
+- [ui-orbit.js](#ui-orbitjs)
+- [授權](#授權)
+
+---
+
+## ui-play.js
+
+`<ui-play>` 是給老師錄影用的模擬畫面。畫面內容寫在 `<stage-item>` 裡，可以是任何 HTML；播放的步驟寫在 `<script-item>` 裡，每個步驟是一個 `-fx` 標籤，直接作用在舞台上的既有內容：標記、註解、蓋印章、改寫文字、淡入淡出。錄影時用鍵盤推進，要重錄就重新整理頁面。
+
+### 快速開始
+
+```html
+<script src="ui-play.js"></script>
+
+<ui-play frame="win" frame-title="Task 2 修改示範">
+  <stage-item>
+    <p id="s1">Technology is very good for society.</p>
+  </stage-item>
+  <script-item>
+    <mark-fx target="#s1" text="very good" kind="underline" color="red"></mark-fx>
+    <stamp-fx target="#s1" text="very good" start="with">大錯特錯</stamp-fx>
+    <pause-fx></pause-fx>
+    <swap-fx target="#s1" text="very good" to="indispensable"></swap-fx>
+  </script-item>
+</ui-play>
+```
+
+點一下元件選定它，再按空白鍵或右方向鍵推進。頁面上有多個 `<ui-play>` 時，鍵盤只控制最後點選的那一個。設 `next-by="click"` 改成點內容區推進，`both` 則兩者皆可。
+
+### 播放節奏
+
+每個 `-fx` 都有 `start` 屬性，觀念同 PowerPoint 動畫：
+
+| `start` | 意思 |
+| --- | --- |
+| `click` | 等按鍵才開始（按一下時） |
+| `with` | 和上一個效果同時開始（與前動畫同時） |
+| `after` | 上一個效果結束後自動開始（接續前動畫） |
+
+沒寫 `start` 時依 `step-mode` 決定：`manual` 預設 `click`，`mixed`、`auto` 預設 `after`。`<pause-fx>` 會讓下一個效果改為等按鍵。`step-mode="auto"` 忽略所有等按鍵的地方，從頭自動播完。
+
+### `<ui-play>` 屬性：尺寸與版面
+
+長度屬性只寫數字時視為 px。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `width` | `100%` | 元件寬度。`phone` 外框預設 `390px`。 |
+| `height` | 自動 | 固定高度。 |
+| `min-height` | `240px` | 最小高度。 |
+| `aspect` | 無 | 固定比例，例如 `16/9`，設了就忽略 `height`。 |
+| `padding` | `32px` | 內容區內距。 |
+| `content-align` | `left` | `left`、`center`、`right`。 |
+| `content-valign` | `top` | `top`、`middle`、`bottom`。 |
+
+### `<ui-play>` 屬性：外框
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `frame` | `plain` | `none`、`plain`、`mac`、`win`（Windows 11）、`win-classic`（Windows 98）、`browser`、`firefox`（Firefox 樣式）、`phone`、`paper`（稿紙）、`sheet`（試算表）、`notebook`（筆記本分頁）、`draw`（小畫家）。 |
+| `frame-title` | 無 | 標題列文字；`phone` 外框顯示在時間位置。 |
+| `frame-icon` | 無 | 標題列圖示，Bootstrap Icons 類別，例如 `bi-file-earmark-text`。 |
+| `frame-url` | 無 | `browser` 外框網址列文字。 |
+| `border-width` | `1px` | 外框粗細；`win`、`mac` 為 `2px`。 |
+| `border-style` | `solid` | `solid`、`dashed`、`dotted`、`double`。 |
+| `border-color` | `bg-alternative` | 外框顏色。 |
+| `radius` | `10px` | 圓角。 |
+| `bg-color` | `background` | 內容區背景。 |
+| `bar-color` | `bg-alternative` | 標題列背景；`sheet` 為欄列標頭背景，`notebook` 為分頁列背景。 |
+| `bar-text-color` | `shell` | 標題列文字。 |
+
+**Firefox 樣式 `firefox`**
+
+上方分頁列、下方工具列（上一頁、下一頁、重新整理、網址列、擴充功能、選單）；工具列底色用 `rgb(36,36,36)`，只用實色。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `tabs` | `frame-title` | 分頁名稱，用「\|」分隔，例如 `tabs="口說題庫\|Task 2"`。 |
+| `tab-active` | `1` | 選取中的分頁（從 1 起算）。 |
+| `tab-add` | 開 | `false` 不畫新分頁的 `+`。 |
+| `frame-url` | `frame-title` | 網址列文字。 |
+| `frame-icon` | 無 | 選取中分頁的圖示。 |
+| `ff-controls` | `win` | 視窗按鈕：`win`、`mac`（左上紅黃綠圓點）、`none`。 |
+
+**稿紙 `paper`**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `rule-color` | `gray` | 橫線顏色。 |
+| `margin-line-width` | `3px` | 左側紅線粗細。 |
+| `margin-line-color` | `red` | 左側紅線顏色。 |
+
+稿紙預設為深色：底色 `bg-alternative`、文字 `vanilla`、外框 `gray`。要淺色稿紙可設 `bg-color="vanilla" text-color="background" rule-color="calm"`。
+
+稿紙內的段落、清單、標題間距會歸零，讓每行文字坐在橫線上。
+
+**試算表 `sheet`**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `cell-width`、`cell-height` | `96px`、`34px` | 儲存格寬高。未設 `line-height` 時，行高等於 `cell-height`。 |
+| `grid-color` | `bg-alternative` | 格線顏色。 |
+| `row-header-width` | `48px` | 列號寬度。 |
+| `column-header-height` | `30px` | 欄名高度。 |
+| `header-line-color` | `background` | 標頭分隔線顏色。 |
+| `corner-color` | `gray` | 左上角三角形顏色。 |
+
+舞台元素加上 `cell="B3"` 或 `cell="A1:D1"` 就會對齊到儲存格。
+
+```html
+<ui-play frame="sheet" cell-width="104">
+  <stage-item>
+    <div cell="A1:D1">Coffee sales (tons)</div>
+    <div cell="B3" id="peak" style="text-align:right">260</div>
+  </stage-item>
+  <script-item>
+    <mark-fx target="#peak" kind="circle"></mark-fx>
+  </script-item>
+</ui-play>
+```
+
+**筆記本 `notebook`**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `tabs` | `快速筆記` | 分頁名稱，以 `\|` 分隔。 |
+| `tab-colors` | `green\|blue\|playful\|violet\|pink\|key` | 分頁顏色，以 `\|` 分隔，不夠時循環使用。 |
+| `tab-active` | `1` | 目前分頁（從 1 起算），底線顏色跟著它。 |
+| `tab-add` | `true` | 是否顯示「+」分頁。 |
+| `search` | `搜尋筆記本` | 搜尋框提示文字，`false` 不顯示搜尋框。 |
+| `search-width` | `280px` | 搜尋框寬度。 |
+
+分頁只是外觀，不能點擊切換。
+
+**小畫家 `draw`**
+
+模擬 Windows 小畫家的功能表列（檔案、編輯、檢視、儲存、分享、復原、取消復原）、功能區（選取項目、影像、工具、筆刷、色彩），以及左側筆刷大小滑桿。全部只是外觀。預設 `min-height` 為 `360px`，`padding` 為 `32px 32px 32px 88px`，左側留給滑桿。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `draw-tool` | `brush` | 選取中的工具：`select`、`pencil`、`eraser`、`fill`、`picker`、`text`、`zoom`、`brush`。 |
+| `draw-color` | `yellow` | 色彩群組的目前顏色。 |
+| `draw-select-color` | `quiet` | 選取框與滑桿圓鈕顏色。 |
+| `draw-slider` | `true` | 是否顯示左側滑桿；關閉時可用 `padding` 縮小左側留白。 |
+| `draw-size` | `0` | 滑桿位置 0 到 100，0 在最下方。 |
+
+### `<ui-play>` 屬性：文字
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `font-family` | 系統字體 | 內容字體。 |
+| `font-size` | `1.25rem` | 內容字級。 |
+| `line-height` | `1.7` | 行高。 |
+| `text-color` | `shell` | 文字顏色；`paper` 為 `vanilla`。 |
+| `accent-color` | `key` | 註解外框與按鈕的主色。 |
+
+### `<ui-play>` 屬性：播放
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `autoplay` | `false` | `true` 載入即播、`visible` 進入畫面才播、`false` 等第一次按鍵。 |
+| `step-mode` | `mixed` | `manual`、`mixed`、`auto`，見「播放節奏」。 |
+| `step-delay` | `600` | `after` 步驟之間的間隔（ms）。 |
+| `rate` | `1` | 播放倍率。 |
+| `next-by` | `key` | 推進方式：`key`（鍵盤）、`click`（點內容區，停用鍵盤）、`both`。點到舞台內的連結、按鈕、輸入框或正在選取文字時不推進。 |
+| `keyboard` | `true` | 是否啟用鍵盤。 |
+| `key-next` | `Space,ArrowRight` | 下一步按鍵，逗號分隔，可寫 `KeyN` 或 `n`。 |
+| `controls` | `none` | 播放／暫停按鈕：`none`、`hover`（滑鼠移入才出現）、`always`。 |
+| `controls-position` | `bottom` | `bottom`、`top`、`outside`（框外）。 |
+| `sound` | `on` | 全域音效開關。 |
+| `volume` | `0.6` | 音量 0 到 1。 |
+| `end-target` | 無 | 播完後顯示的元素 id（寫不寫 `#` 都可以），通常先設 `hidden`。 |
+| `end-effect` | `fade` | 顯示效果，選項同 `show-fx`。 |
+| `end-speed` | `400`（`fade` 650、`pop` 550） | 動畫時間（ms）。 |
+| `end-delay` | `0` | 播完後等多久才顯示（ms）。 |
+
+### 效果標籤共用屬性
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `start` | 依 `step-mode` | `click`、`with`、`after`。 |
+| `delay` | `0` | 開始前等待（ms）。 |
+| `name` | 無 | 效果名稱，供 `remove-fx` 移除。 |
+| `target` | 必填 | 目標元素的 CSS 選擇器，先找舞台內，找不到再找整頁。 |
+| `text` | 無 | 目標內的子字串，只作用在這段文字上，不必另外包 `<span>`。 |
+| `nth` | `1` | 子字串出現多次時，指定第幾個。 |
+
+標記、印章、註解都以「文字實際所在的範圍」對齊，不是整個區塊的寬度；文字改變造成重新排版時，已畫好的效果會自動跟著移動。
+
+### 效果標籤
+
+**`<show-fx>`、`<hide-fx>`：出現與消失**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `effect` | `fade` | `fade`（由模糊轉清晰並微微上浮）、`slide-up`、`slide-down`、`slide-left`、`slide-right`、`zoom`、`pop`（放大回彈）、`wipe`。 |
+| `speed` | `400`（`fade` 650、`pop` 550） | 動畫時間（ms）。 |
+| `distance` | `24px` | 滑入距離。 |
+| `collapse` | 布林 | 隱藏時不保留空間。 |
+
+被 `show-fx` 指定的元素在播放前會自動先隱藏。
+
+**`<mark-fx>`：標記**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `kind` | `highlight` | `highlight`、`underline`、`circle`、`box`、`strike`、`bracket`、`wavy`（波浪底線）、`double`（雙底線）、`cross`（打叉）、`arrow`（箭頭指向文字）。 |
+| `line-style` | `solid` | 線型：`solid`、`dashed`、`dotted`；`highlight` 不適用。 |
+| `direction` | `left` | 只用於 `arrow`：箭頭從哪一側指向文字，`left`、`right`、`top`、`bottom`。 |
+| `arrow-length` | `48` | 只用於 `arrow`：箭身長度（px）。 |
+| `color` | `yellow` | 顏色。 |
+| `text-color` | `background` | `highlight` 時目標文字改成的顏色。 |
+| `thickness` | `3` | 線條粗細。 |
+| `rough` | `0.5` | 手繪感 0 到 1，0 是工整直線。 |
+| `seed` | 自動 | 手繪亂數種子，同一個值每次畫出一樣的線。 |
+| `padding` | `4` | 標記超出文字的範圍。 |
+| `speed` | `600` | 畫出所需時間（ms）。 |
+
+**`<note-fx>`：註解泡泡**
+
+註解內容寫在標籤內，可含行內 HTML。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `position` | `auto` | `top`、`bottom`、`left`、`right`、`auto`。 |
+| `offset-x`、`offset-y` | `0` | 位置微調。 |
+| `color`、`bg-color`、`border-color` | `vanilla`、`bg-alternative`、`accent-color` | 文字、背景、外框顏色。 |
+| `font-size` | `1rem` | 字級。 |
+| `max-width` | `320px` | 最大寬度。 |
+| `pointer` | `true` | 是否顯示指向目標的小尖角；`sticky`、`plain` 預設 `false`。 |
+| `variant` | `bubble` | 外觀：`bubble`、`sticky`（便利貼，黃底深字、微傾斜、無尖角）、`dashed`（虛線框）、`plain`（無外框）。 |
+| `icon`、`icon-color` | 無、外框色 | 內文前面加 Bootstrap Icons 圖示，例如 `bi-lightbulb-fill`。 |
+| `rotate` | `0`（`sticky` 為 `-2`） | 傾斜角度（deg）。 |
+| `shadow`、`shadow-color` | 關、`gray` | 實色偏移陰影，不用透明度。 |
+| `radius`、`border-width` | 預設 | 圓角與外框粗細。 |
+| `speed` | `300` | 出現動畫時間（ms）。 |
+| `stay` | `forever` | 停留多久後消失（ms）。 |
+| `fade-out` | `300` | 消失時的淡出時間（ms）。 |
+
+**`<stamp-fx>`：印章**
+
+印章文字寫在標籤內，用 `|` 分行；直書時每行成為一欄，由右往左排。標籤內容留空並設定 `icon`，就是純圖示印章。墨跡斑駁以挖空方式產生，不使用半透明。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `anchor` | `center` | 對齊目標的位置：`center`、`top-left`、`top-right`、`bottom-left`、`bottom-right`、`left`、`right`、`top`、`bottom`。 |
+| `offset-x`、`offset-y` | `0` | 從對齊點再偏移。 |
+| `color` | `red` | 印泥顏色。 |
+| `size` | `1.4rem` | 印章字級，整個印章依此縮放。 |
+| `font-family` | 系統字體 | 印章字體。 |
+| `letter-spacing` | `6px` | 字距。 |
+| `direction` | `horizontal` | `horizontal`、`vertical`。 |
+| `shape` | `round` | `rect`、`round`、`circle`、`ellipse`。 |
+| `padding` | `6px 16px` | 文字到外框的距離。 |
+| `border-width` | `3` | 外框粗細。 |
+| `inner-border` | `single` | 內圈細框：`none`、`single`、`double`。 |
+| `rotate` | `-8` | 角度（deg），或 `random`。 |
+| `rotate-range` | `12` | `random` 時的隨機範圍（正負）。 |
+| `icon` | 無 | Bootstrap Icons 名稱，例如 `bi-hand-thumbs-up`。 |
+| `icon-position` | 橫書 `left`、直書 `top` | `left`、`right`、`top`、`bottom`。 |
+| `icon-size` | `1.1` | 圖示相對文字的倍數。 |
+| `icon-gap` | `6px` | 圖示與文字距離。 |
+| `ink` | `0.5` | 斑駁程度 0 到 1。 |
+| `edge` | `0.4` | 邊緣破損程度 0 到 1。 |
+| `bleed` | `0.2` | 墨水暈開程度 0 到 1。 |
+| `pressure` | `random` | 用力不均：`even`、`left`、`right`、`top`、`bottom`（該側較淡）。 |
+| `seed` | 依文字產生 | 墨跡亂數種子，同一個值每次產生一樣的斑駁，重錄時畫面一致。 |
+| `speed` | `380` | 落下所需時間（ms）。 |
+| `drop-scale` | `2.6` | 起始放大倍數，越大越像從高處砸下。 |
+| `bounce` | `0.3` | 落地回彈程度 0 到 1。 |
+| `shake` | `2` | 落地時畫面震動幅度（px），`0` 不震。 |
+| `stay` | `forever` | 停留多久後消失（ms）。 |
+| `fade-out` | `400` | 消失時的淡出時間（ms）。 |
+| `sound` | `on` | `on`（內建蓋章聲）、`off`，或音檔網址。 |
+
+```html
+<stamp-fx target="#s2" icon="bi-hand-thumbs-up" color="green">增分利器</stamp-fx>
+<stamp-fx target="#s1" icon="bi-x-lg" shape="circle" size="2rem"></stamp-fx>
+<stamp-fx target="#s3" shape="rect" direction="vertical">考官|最愛</stamp-fx>
+```
+
+**`<swap-fx>`：改寫**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `to` | 必填 | 替換後的文字。 |
+| `mode` | `strike` | `strike` 劃掉舊字、新字接在後面；`replace` 舊字淡出新字淡入；`retype` 逐字刪除再逐字打出。 |
+| `del-color`、`ins-color` | `red`、`green` | 舊字、新字顏色。 |
+| `speed` | `500`（`retype` 為每字 60） | 動畫時間（ms）。 |
+
+**`<pointer-fx>`：游標移動並點擊**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `from` | `bottom-right` | 起點：`top-left`、`bottom-right` 等方位、「x,y」（px），或 `#元素id`。 |
+| `speed` | `800` | 移動時間（ms）。 |
+| `click` | `true` | 到了按一下，出現水波。 |
+| `color`、`size`、`icon` | `vanilla`、`1.6`（rem）、`bi-cursor-fill` | 游標顏色、大小與 Bootstrap Icons 圖示。 |
+| `offset-x`、`offset-y` | `0` | 落點微調。 |
+| `stay`、`fade-out`、`name` | `forever`、`300`、無 | 同 `note-fx`；游標預設停在目標上，用 `remove-fx` 移除。 |
+
+**`<type-fx>`：逐字打出**
+
+目標文字先隱藏，再一個字一個字打出，內部的行內標籤保留。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `speed` | `50` | 每個字的間隔（ms）。 |
+| `cursor` | `true` | `true` 打完移除游標、`keep` 保留、`false` 不顯示。 |
+
+**`<zoom-fx>`：鏡頭聚焦**
+
+整個內容區放大並移到目標位置，之後的標記、註解會自動對準。`<zoom-fx scale="1">` 還原。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `scale` | `1.6` | 放大倍數，`1` 為還原（不需要 `target`）。 |
+| `speed` | `700` | 動畫時間（ms）。 |
+
+**`<shake-fx>`：晃動**
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `strength` | `6` | 起始幅度（px），逐漸變小。 |
+| `count` | `6` | 來回次數。 |
+| `axis` | `x` | `x`（左右）或 `y`（上下）。 |
+| `speed` | `450` | 動畫時間（ms）。 |
+
+**流程**
+
+| 標籤 | 屬性 | 說明 |
+| --- | --- | --- |
+| `<wait-fx>` | `ms`（預設 `800`） | 停頓。 |
+| `<pause-fx>` | 無 | 下一個效果改為等按鍵。 |
+| `<remove-fx>` | `name`（逗號分隔多個）、`speed`（預設 `300`） | 移除指定名稱的 `mark-fx`、`note-fx`、`stamp-fx`。 |
+
+### 事件與方法
+
+| 名稱 | 說明 |
+| --- | --- |
+| `play-end` 事件 | 播放完畢時觸發，會冒泡；`detail.endTarget` 為 `end-target` 指向的元素。 |
+| `el.play()`、`el.pause()` | 開始或繼續、暫停。 |
+| `el.next()` | 等同按一次下一步按鍵。 |
+| `el.rate` | 讀寫播放倍率（0.1 到 8）。 |
+
+---
+
+## ui-stream.js
+
+`<ui-stream>` 把一段對話做成聊天室回放：訊息逐則出現，可以逐字打出，播到指定的地方停下來，按了才繼續，並可在暫停後揭露參考答案。適合批改過程重播、口說問答示範。
+
+### 快速開始
+
+```html
+<script src="ui-stream.js"></script>
+
+<ui-stream title="Speaking Part 2：Describe a river" controls progress autoplay>
+  <stream-item from="student" name="Amy">I think the river is very beautiful.</stream-item>
+  <stream-item from="teacher" name="老師" typed pause="先想想：老師會先改哪個字？" reveal="ans-1">
+    beautiful 太籠統了。
+  </stream-item>
+  <stream-item from="system">字彙資源 6.0 → 6.5</stream-item>
+</ui-stream>
+
+<template id="ans-1">The river <mark>winds through</mark> the valley.</template>
+```
+
+內建三個角色：`teacher`（靠右、實心）、`student`（靠左、外框）、`system`（置中、虛線）。訊息內可用 `<mark>` 與 `<c-key>`、`<c-urgent>` 等色名標籤，逐字打出時格式同步出現；`ui-stream.js` 已內建色名標籤樣式。
+
+### `<ui-stream>` 屬性：播放
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `autoplay` | 關 | 載入後自動播放。 |
+| `speed` | `30` | 逐字打出時每個字的間隔（ms）。 |
+| `delay` | `600` | 一則結束到下一則出現的間隔（ms）。 |
+| `start` | `0` | 載入時直接顯示到第幾則。 |
+| `loop` | 關 | 播完清空重來。 |
+| `type-all` | 關 | 每一則都逐字打出。 |
+| `auto-scroll` | 開 | 新內容出現時自動捲到底。有 `height` 時捲動內容流；沒有 `height` 時捲動整個頁面，讓最後一行留在視窗內（元件不在畫面上時不捲）。 |
+| `scroll-space` | `48` | 捲到底時最後一行下方保留的空白（px），方便螢幕錄影時不出界。 |
+| `step` | 關 | 逐則模式：每則播完就停，按「下一則」才繼續。 |
+| `mode` | 無 | `live`：接收模式。不顯示控制列，`loop`、`autoplay`、`start` 失效；預先寫好的 `stream-item` 一載入就直接顯示，之後用 `add()` 或 ui-contacts 送進來的訊息逐則播出。 |
+
+### `<ui-stream>` 屬性：控制列
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `controls` | 關 | 顯示控制列：播放／暫停、下一則、重播。播完最後一則後「下一則」變灰失效（設了 `loop` 則維持可按）。 |
+| `controls-position` | `top` | `top`、`bottom`。 |
+| `counter` | 開 | 控制列右側的「目前／總數」。 |
+| `progress` | 關 | 控制列下方的進度條。 |
+| `labels` | `播放,暫停,下一則,重播` | 按鈕文字，`",,,"` 只顯示圖示。 |
+| `speed-control` | 關 | 速度選單（0.5x、1x、1.5x、2x）。 |
+
+### `<ui-stream>` 屬性：版面
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `layout` | 無 | 整個內容流的排法，見下方「排版 layout」。 |
+| `stage` | 無 | `left` 或 `right`：在外框裡切出畫面區，內容流放另一邊。只寫 `stage` 等同 `left`。見下方「畫面區 stage」。 |
+| `stage-width` | `60` | 畫面區佔外框寬度的百分比，10 到 90。 |
+| `stage-from`、`stage-to` | 無 | 畫面區背景由上到下的雙色漸層（色票名稱或色碼，例如 `#242424`）；只寫一端時另一端用外框背景色。 |
+| `stage-start` | 無 | 畫面區的開場內容（`#id` 或圖片網址）；重播、`goto`、`loop` 時回到它。 |
+| `split-labels` | 無 | `layout="split"` 時左右兩欄的標題，寫法 `Examiner:playful, Candidate:blue`，冒號後的顏色可省略。 |
+| `title` | 無 | 元件上方標題。 |
+| `title-size` | `1.2rem` | 標題字級，只寫數字視為 rem。 |
+| `title-weight` | `700` | 標題粗細。 |
+| `title-color` | `violet` | 標題顏色。 |
+| `height` | 自動 | 固定高度（px），超出時內部捲動。 |
+| `gap` | `14` | 訊息間隔（px）。 |
+| `gap-same` | 同 `gap` | 同一角色連續發言的間隔。`layout` 為 `flat`、`tail` 時沒寫則是 `4`。 |
+| `gap-system` | 同 `gap` | system 訊息前後的間隔。 |
+| `padding` | `16` | 內容流內距（px）。 |
+| `bubble-width` | `78` | 氣泡最大寬度（百分比）。 |
+| `bubble-radius` | `12` | 氣泡圓角（px）；`notch` 樣式為切角大小。 |
+| `bubble-padding` | `10px 14px` | 氣泡內距。 |
+| `bubble-border-width` | `0` | 所有氣泡的邊框粗細（px）。`0` 依樣式預設：`double` 4、`notch` 1.5、`callout` 3、其他 1。 |
+| `border-width` | `1` | 整個元件外框粗細（px）。 |
+| `bordered` | 開 | 外框與圓角。 |
+| `line-height` | `1.6` | 氣泡行高。 |
+| `font-size` | `1rem` | 整體字級。 |
+| `meta-size` | `0.75rem` | 名稱、時間那一行的字級。 |
+| `text-align` | 無 | 訊息內容對齊：`left`、`center`、`right`、`justify`。也可寫在 `stream-role` 或 `stream-item`，越細的優先。 |
+| `avatar` | 開 | 顯示頭像。 |
+| `avatar-size` | `36` | 頭像直徑（px）。圖片頭像會自動裁切縮放成圓形。 |
+| `avatar-position` | `top` | `top` 和名稱列對齊、`bottom` 和氣泡底對齊。 |
+| `avatar-repeat` | `all` | 同一人連續發言：`all` 每則顯示頭像；`first` 只在第一則；`last` 只在最後一則。設為 `first` 或 `last` 時，名字只在連續發言的第一則顯示。`layout` 為 `flat`、`tail` 時沒寫則等同 `first`。 |
+
+### 排版 layout
+
+不寫 `layout` 就是原本的頭像加氣泡、左右對話。`layout` 改的是整個內容流的排法，和 `data-style`（單一氣泡外觀）是不同層次；每種排版都會讓部分屬性失效。
+
+| `layout` | 樣子 | 失效或改變的屬性 | system 訊息 |
+| --- | --- | --- | --- |
+| `flat` | 平鋪式（像 Slack）：全部靠左、沒有氣泡框，名字和時間在上方，連續發言合併，頭像為圓角方形。 | `side` 一律靠左；不套用 `data-style`。 | 左邊有色條的引用區塊，縮排到文字位置；`reveal` 也一樣縮排。 |
+| `tail` | 尾巴氣泡（像 iMessage）：角色色填滿、大圓角，同一人連續發言只有最後一則有尾巴。 | 不顯示頭像；不套用 `data-style`；圓角為 `bubble-radius` + 6。 | 置中小字，沒有外框。 |
+| `split` | 雙欄對照：`left` 進左欄、`right` 進右欄，另一欄留空，中間一條分隔線（`border-color`）。 | 訊息佔滿自己那一欄，`bubble-width` 不作用；靠右欄的頭像與名字也放左邊。 | 橫跨兩欄。 |
+
+```html
+<ui-stream layout="split" split-labels="Band 6 原句:playful, Band 7 改寫:green" avatar="false">
+  <stream-role name="b6" label="原句" color="playful" side="left"></stream-role>
+  <stream-role name="b7" label="改寫" color="green" side="right"></stream-role>
+  <stream-item from="b6">I buy coffee before the meeting.</stream-item>
+  <stream-item from="b7">I need to grab a black coffee before the meeting.</stream-item>
+  <stream-item from="system">need 後面接不定詞片語當受詞。</stream-item>
+</ui-stream>
+```
+
+搭配 ui-contacts 時，`split` 和 `tail` 用 `p-card` 的 `side` 決定放哪一邊（ui-contacts 預設 `left`）；`flat` 不看 `side`。
+
+### 畫面區 stage
+
+`stage` 在外框裡切出一塊畫面區。訊息一出現（不等逐字打完），畫面區就淡入切換成那一則 `stage` 屬性指定的內容；沒寫 `stage` 的訊息不動畫面區。`stage` 和 `reveal` 各自獨立，同一則可以左邊換圖、右邊帶出解說。
+
+| 訊息的 `stage` 值 | 畫面區顯示 |
+| --- | --- |
+| `#id` | 該 `template`（或元素）的內容，置中，超出時在畫面區內部捲動。 |
+| `clear` | 清空。 |
+| 其他 | 當成圖片網址，等比縮放完整放進畫面區。 |
+
+```html
+<template id="st-adj">hot drinks <c-key>to go</c-key>：形容詞，後位修飾名詞。</template>
+
+<ui-stream stage="left" stage-width="60" stage-start="#st-cover" height="440">
+  <stream-item from="student" stage="#st-adj">This cafe doesn't serve hot drinks to go.</stream-item>
+  <stream-item from="teacher" stage="coffee.jpg">Nice. Now look at this picture.</stream-item>
+</ui-stream>
+```
+
+ui-contacts 的 `p-msg` 也能寫 `stage`（ui-contacts.js 需同步更新）。建議搭配 `height`，畫面區和內容流等高。外部切換用 `setStage(v)`，值同上。
+
+### `<ui-stream>` 屬性：色彩與動畫
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `accent` | `key` | 控制列按鈕、進度條、揭露區塊框線。 |
+| `border-color` | `bg-alternative` | 外框與控制列分隔線。 |
+| `text-color` | `vanilla` | 外框式氣泡的文字色。 |
+| `background` | `base` | 內容流與外框式氣泡的底色。 |
+| `mark-color` | 無 | 氣泡內 `<mark>` 的底色。 |
+| `teacher-color`、`student-color`、`system-color` | `key`、`violet`、`gray` | 內建角色顏色。 |
+| `pause-color` | `yellow` | 暫停按鈕顏色。 |
+| `animation` | `slide` | `slide`、`pop`、`fade`。 |
+| `cursor` | 開 | 逐字打出時的閃爍游標。 |
+| `typing-indicator` | 關 | 逐字前先出現「正在輸入」的三個點。 |
+| `pause-icon` | `hand-index-thumb` | 暫停按鈕圖示。 |
+| `pause-text` | `點一下繼續` | 暫停按鈕預設文字。 |
+| `pause-style` | `button` | `button` 在內容流放一顆按鈕；`overlay` 用遮罩蓋住整個內容流。 |
+
+### `<stream-role>`：自訂角色
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `name` | 必填 | 角色代號，`stream-item` 的 `from` 用這個。 |
+| `label` | 無 | 預設顯示名稱。 |
+| `color` | `shell` | 頭像、名稱、氣泡色。 |
+| `icon` | `person-fill` | 頭像圖示。 |
+| `image` | 無 | 頭像圖片。 |
+| `initials` | 無 | 以縮寫文字當頭像，例如 `AR`。頭像優先順序：`image`、`initials`、`icon`。 |
+| `side` | `left` | `left`、`right`、`center`（不顯示頭像）。 |
+| `data-style` | `outline` | 氣泡樣式，見下表。v0.5 起不再讀取 `style` 屬性。`layout` 為 `flat`、`tail` 時不套用。 |
+| `text-color` | 自動 | 氣泡文字色。 |
+| `text-align` | 無 | 這個角色的訊息對齊。 |
+
+| `data-style` | 樣式 |
+| --- | --- |
+| `filled` | 實心。 |
+| `outline` | 外框。 |
+| `dashed` | 虛線框，文字置中。 |
+| `double` | 雙線框。 |
+| `notch` | 切角框：靠左切右上角、靠右切左上角，底色是角色色與背景調和的實色。 |
+| `callout` | 引線框：粗框外側一條分離的直線，再拉出折線引線指向頭像；頭像在下時引線往下。 |
+
+### `<stream-item>`：訊息
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `from` | `student` | 角色代號。 |
+| `name` | 角色 `label` | 顯示名稱。 |
+| `time` | 無 | 名稱旁的時間文字。 |
+| `badge`、`badge-color` | 無、角色色 | 名稱列的小角標。 |
+| `badge-click` | 關 | 角標可點擊（游標與懸停框線）；點下去發出 `ui-stream:badge`。JSON 寫 `badgeClick`。 |
+| `data-chart` | 無 | 點角標時帶出的選擇器（通常指向 template 或圖表元素），放在 `ui-stream:badge` 的 `detail.data`。搭配 `link-when do="feed"` 在別處產生圖表，見 [`charts/`](../charts/README.md)。JSON 寫 `dataChart`。 |
+| `icon`、`image`、`initials`、`color` | 角色設定 | 只覆寫這一則。 |
+| `side`、`data-style` | 角色設定 | 只覆寫這一則靠哪一邊與氣泡樣式。 |
+| `source` | 無 | 內容改從該 id 的 template 或元素複製。 |
+| `typed` | 關 | 逐字打出。 |
+| `speed`、`delay`、`gap` | 沿用容器 | 只覆寫這一則。 |
+| `pause` | 無 | 這一則之後停下來，值為按鈕文字，空值用 `pause-text`。 |
+| `reveal` | 無 | 這一則之後插入該 id 的內容（有 `pause` 時在按下繼續後）。 |
+| `reveal-target` | 無 | 搭配 `reveal`，改放進這個元素並顯示它。 |
+| `stage` | 無 | ui-stream 有 `stage` 時，這一則一出現就切換畫面區：`#id`、圖片網址或 `clear`。 |
+| `highlight` | 關 | 出現時氣泡閃三下。 |
+| `text-align` | 無 | 這一則的對齊。 |
+
+### 資料來源
+
+| 屬性 | 說明 |
+| --- | --- |
+| `src` | 從網址讀取 JSON。 |
+| `data-id` | 從 `window[data-id]` 讀取 JSON。 |
+
+JSON 為陣列，或 `{ roles, items }`。item 的 `text` 為純文字、`html` 為 HTML，其他欄位同屬性的駝峰寫法，例如 `revealTarget`、`textAlign`、`dataStyle`（roles 的氣泡樣式也寫 `dataStyle`）。全頁預設值可寫在 `window.UiStreamConfig`，鍵名同樣為駝峰式。
+
+### 事件與方法
+
+事件都會冒泡。
+
+| 事件 | `detail` | 觸發時機 |
+| --- | --- | --- |
+| `ui-stream:item` | `{ index, item, role }` | 每一則出現時。 |
+| `ui-stream:typed` | `{ index }` | 逐字打完時。 |
+| `ui-stream:pause` | `{ index, text }` | 停在暫停點時。 |
+| `ui-stream:resume` | `{ index }` | 按下繼續時。 |
+| `ui-stream:done` | `{ total }` | 全部播完時，只發一次。最後一則顯示完就發出，逐則模式不必再多按一次「下一則」。重播、`goto`、`add()` 會重置。 |
+| `ui-stream:stage` | `{ index, value }` | 訊息切換畫面區時（`setStage` 不觸發）。 |
+| `ui-stream:badge` | `{ index, badge, item, role, data }` | 點擊 `badge-click` 的角標時；`data` 是該則的 `data-chart`，沒寫是空字串。 |
+
+```js
+const s = document.querySelector('ui-stream');
+s.play(); s.pause(); s.toggle();
+s.next();          // 下一則（不逐字）
+s.replay();        // 從頭重播
+s.finish();        // 立刻顯示全部
+s.goto(3);         // 直接顯示到第 3 則
+s.add({ from: 'teacher', text: '新訊息' });
+s.add({ from: 'teacher', text: '只有這則靠左', side: 'left', dataStyle: 'notch' });
+s.addRole('ar', { label: 'AI Receptionist', color: 'gray', initials: 'AR', side: 'left', dataStyle: 'outline' });
+s.hasRole('ar');   // true
+s.setStage('#st-table');   // 切換畫面區：#id、圖片網址或 'clear'
+s.live;            // 是否為 mode="live"
+s.export('text');  // 匯出文字；'html' 匯出 HTML
+s.index; s.total;
+```
+
+---
+
+## ui-stream-beyond.js
+
+`ui-stream-beyond.js` 是 `<ui-stream>` 的相依增強。不修改 `ui-stream.js`，另外掛上三項功能：單一則訊息的頭像光暈、reveal 顯示完再暫停一次，以及醒目與不醒目的泡泡樣式。沒有新增標籤，只新增兩個屬性與兩個 `data-style` 值。單一 `.js` 檔，載入後自動注入樣式，不使用 Shadow DOM。
+
+命名規則：相依增強檔一律叫 `{元件名}-beyond.js`，例如 `ui-stream-beyond.js`。
+
+### 快速開始
+
+```html
+<script src="ui-stream-beyond.js"></script>
+<script src="ui-stream.js"></script>
+
+<ui-stream controls counter>
+  <stream-item from="teacher" avatar-glow>重點</stream-item>
+  <stream-item from="student" pause="看解說" reveal="a1" reveal-pause="讀完了再繼續">and I work</stream-item>
+  <stream-item from="teacher" data-style="spot">重點</stream-item>
+  <stream-item from="teacher" data-style="faint">補充說明</stream-item>
+</ui-stream>
+<template id="a1"><div>解說內容</div></template>
+```
+
+`ui-stream-beyond.js` 要放在 `ui-stream.js` 之前：ui-stream 建好後會清掉原始的 `<stream-item>`，之後就讀不到 `avatar-glow` 與 `reveal-pause`。只用 `data-style` 的話，載入順序不拘。
+
+### avatar-glow
+
+替單一則訊息的頭像加光暈，用來強調。頭像出現時光暈先閃三下，之後維持。
+
+| 屬性 | 用在 | 說明 |
+| --- | --- | --- |
+| `avatar-glow` | `<stream-item>` | 只寫屬性名稱，光暈用該角色的顏色；值可寫色票名稱或任何 CSS 顏色，例如 `avatar-glow="yellow"`、`avatar-glow="#FF2E63"`。 |
+
+可以和 `data-style`、`highlight` 等屬性並用。頭像被隱藏時看不到光暈：`avatar="false"`，或 `avatar-repeat` 隱藏了同一個人連續訊息的頭像。
+
+### reveal-pause
+
+ui-stream 的 `pause` 是「這一則出現後停住，按了才顯示 `reveal`」，所以 reveal 一出現就接著播下一則。加上 `reveal-pause` 後，reveal 顯示完會再停一次，再按一下才出現下一則。
+
+| 屬性 | 用在 | 說明 |
+| --- | --- | --- |
+| `reveal-pause` | `<stream-item>` | 值是按鈕文字；只寫屬性名稱不寫值，沿用 ui-stream 的 `pause-text`（預設「點一下繼續」）與 `pause-icon`。需搭配 `pause` 與 `reveal`。 |
+
+停在 `reveal-pause` 時，按控制列的「播放」或「下一則」也能繼續。最後一則帶 `reveal-pause` 時，按完仍會正常送出 `ui-stream:done`。
+
+### data-style 新增兩個值
+
+ui-stream 會把 `data-style` 的值變成 `.us-值` 這個 class，所以補上樣式就能新增外觀。可寫在 `<stream-item>`，也可寫在 `<stream-role>` 讓整個角色套用，顏色仍跟著角色色或 `color` 屬性走。
+
+| 值 | 外觀 |
+| --- | --- |
+| `spot` | 醒目：3px 粗框、外圈、淡色底、字加粗放大。 |
+| `faint` | 不醒目：灰框灰字、字縮小、頭像轉灰階。 |
+
+### 注意事項
+
+- `layout` 為 `flat` 或 `tail` 時，ui-stream 本來就不套用 `data-style`，這兩個值也不會生效。
+- `reveal-pause` 依賴 ui-stream 在按下繼續後會依序顯示 reveal、送出 `ui-stream:resume`、呼叫 `this.play()` 這個內部做法。ui-stream 日後改了這段，這個檔案要跟著調整。
+- `pause-style="overlay"` 時，第二顆按鈕仍是一般按鈕樣式。
+- 由 JavaScript 事後插入的 `<ui-stream>`，讀不到 `avatar-glow` 與 `reveal-pause`；可在插入前對尚未加入頁面的節點呼叫 `UiStreamBeyond.scan(節點)`。
+
+---
+
+## ui-contacts.js
+
+`<ui-contacts>` 是通訊錄。每個 `<p-card>` 是一個人物，訊息預先寫在裡面的 `<p-msg>`（可寫 HTML）。把人物卡片拖到 `<ui-stream>`，就會送出他的下一則訊息；拖到 `<ui-post mode="live">` 則變成一則留言；也可以點卡片右下角的電話圖示送出。訊息依順序送出，用完後卡片變灰、不能再拖。拖放用 pointer events，滑鼠與觸控都能用。
+
+目標需要先載入 `ui-stream.js`（v0.5 以上）或 [`ui-post.js`](../post/README.md)（v1.1 以上），兩者可以混用；它們都不依賴 ui-contacts。
+
+### 快速開始
+
+```html
+<script src="ui-stream.js"></script>
+<script src="ui-contacts.js"></script>
+
+<ui-contacts for="chat1" show-status>
+  <p-card name="Alf Bowman" ext="120" status="Available" color="blue" image="alf.jpg">
+    <p-msg>Hi, I have a reservation under the name Bowman.</p-msg>
+    <p-msg typed>Is there a lift? I have <mark>quite a lot of luggage</mark>.</p-msg>
+  </p-card>
+  <p-card name="Dolly The Horse" ext="129" status="Not registered" color="yellow" side="right" data-style="filled">
+    <p-msg>（一匹馬走進了大廳。）</p-msg>
+  </p-card>
+</ui-contacts>
+
+<ui-stream id="chat1" mode="live" height="600"></ui-stream>
+```
+
+第一次送出某人的訊息時，ui-contacts 會呼叫 ui-stream 的 `addRole()`，把名字、顏色、頭像、`side`、`data-style` 註冊成角色。
+
+### `<ui-contacts>` 屬性：連結與訊息
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `for` | 無 | 目標 ui-stream 或 ui-post 的 id，可空白分隔多個：拖到哪一個就送到哪一個，點電話圖示送到第一個。不寫時，頁面上只有一個目標就自動用它。 |
+| `type-all` | 關 | 所有訊息都逐字打出。`p-msg` 寫 `typed="false"` 可單則關掉。 |
+| `side` | `left` | 人物在對話中靠哪一邊。 |
+| `data-style` | `outline` | 人物在對話中的氣泡樣式，值同 `stream-role`。 |
+
+### `<ui-contacts>` 屬性：標題與版面
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `title`、`title-size`、`title-weight`、`title-color` | 無、`1.2rem`、`700`、`violet` | 標題。 |
+| `columns` | `2` | 欄數。 |
+| `gap` | `12` | 卡片間距（px）。 |
+| `card-padding` | `12px 14px` | 卡片內距。 |
+| `card-radius` | `10` | 卡片圓角（px）。 |
+| `card-min-height` | 自動 | 卡片最小高度（px）。 |
+| `avatar-size` | `44` | 頭像大小（px）。 |
+| `avatar-shape` | `circle` | `circle`、`rounded`、`square`。 |
+| `name-size`、`name-weight` | `1rem`、`600` | 名字字級與粗細。 |
+| `meta-size` | `0.85rem` | 狀態文字字級。 |
+
+### `<ui-contacts>` 屬性：樣式與色彩
+
+下列屬性都可以寫在 `p-card` 上個別覆寫。優先順序：`p-card` 個別屬性、`p-card` 的 `card-theme`、`ui-contacts` 個別屬性、`ui-contacts` 的 `card-theme`。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `card-theme` | `night` | 預設樣式組合，一次設定下面各項，見下表。 |
+| `card-bg` | 依 theme | 卡片底色。 |
+| `card-border-color`、`card-border-width`、`card-border-style` | 依 theme | 卡片框線色、粗細（px，`0` 為無框）、樣式（`solid`、`dashed`、`double`）。 |
+| `card-bar` | 依 theme | 左側色條寬度（px），顏色用卡片的 `color`。 |
+| `name-color`、`meta-color`、`icon-color` | 依 theme | 名字、狀態文字與分機、⋯ 與電話圖示的顏色。 |
+| `avatar-bg`、`avatar-text-color` | 依 theme | 縮寫或圖示頭像的底色與文字色。 |
+| `hover-color` | 依 theme | 滑鼠移上卡片的外框色。 |
+| `drop-color` | `key` | 拖曳時目標 ui-stream 的提示框線色（只能寫在 `ui-contacts`）。 |
+
+| `card-theme` | 樣式 |
+| --- | --- |
+| `night` | 深底、bg-alternative 細框、灰色頭像。 |
+| `cocoa` | bg-alternative 底、無框、playful 頭像。 |
+| `paper` | vanilla 淺色卡片、深色文字。 |
+| `key` | key 色框線、名字與頭像。 |
+| `neon` | energetic 螢光綠框線、名字與頭像。 |
+| `indigo` | 2px 靛藍框、quiet 文字。 |
+| `dreamy` | dreamy 虛線框、pink 名字。 |
+| `double` | shell 雙線框。 |
+| `tint` | 框線、名字、圖示、頭像都用每張卡片自己的 `color`。 |
+| `bar` | bg-alternative 底，左側 5px 色條與頭像用卡片的 `color`。 |
+
+### `<ui-contacts>` 屬性：顯示開關
+
+都可以寫在 `p-card` 上個別覆寫。
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `show-status` | 關 | 顯示狀態點與狀態文字。 |
+| `status-dot` | `avatar` | 狀態點放在頭像右下角（`avatar`）或狀態文字前面（`text`）。 |
+| `show-ext` | 開 | 名字後面顯示分機號碼。 |
+| `show-menu` | 開 | ⋯ 選單，點開預覽這個人的訊息與送出進度。 |
+| `show-call` | 開 | 電話圖示，點了送出下一則。 |
+| `show-count` | 開 | 剩餘訊息數。 |
+
+### `<p-card>`：人物
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `name` | 必填 | 人物名字，也是對話中顯示的名稱。 |
+| `role` | 由 `name` 產生 | 在 ui-stream 註冊的角色代號。 |
+| `ext` | 無 | 分機號碼。 |
+| `status` | 無 | 狀態文字，純裝飾。 |
+| `status-color` | 自動 | 狀態點顏色。不寫時依文字判斷：Available 綠、Meeting／Busy 紫、Away 黃、DND 紅、其他灰。 |
+| `image`、`initials`、`icon` | 名字縮寫 | 頭像。都不寫時取名字前兩個字的字首，例如 Dolly The Horse 為 DT。對話中的頭像同步。 |
+| `color` | 自動輪替 | 人物主色：對話中的氣泡與頭像色，也用於剩餘數、色條、`tint` 樣式。 |
+| `text-color`、`text-align` | 無 | 對話中氣泡的文字色與對齊。 |
+| `examiner`、`role-label`、`liked` | 無 | 送到 ui-post 時套到這個人的每一則留言：考官樣式、角色徽章文字、愛心預設實心。 |
+
+### `<p-msg>`：訊息
+
+內容可寫 HTML，包含 `<mark>` 與 `<c-key>` 等色名標籤。
+
+- 送到 ui-stream 時，屬性同 `stream-item`：`typed`、`time`、`badge`、`badge-color`、`speed`、`delay`、`gap`、`highlight`、`color`、`side`、`data-style`、`text-align`、`pause`、`reveal`、`reveal-target`、`stage`。
+- 送到 ui-post 時，屬性同 `post-item`：`likes`、`start-likes`、`best`、`low`、`tags`、`reply`、`examiner`、`role-label`、`after`、`liked`、`shares`、`start-shares`、`time`、`delay`、`typing`。作者、頭像、頭像色自動取自 `p-card`。
+
+同一則訊息兩種屬性可以一起寫，送到哪邊就用哪邊的，另一邊會忽略。
+
+### 事件與方法
+
+| 事件 | `detail` | 觸發時機 |
+| --- | --- | --- |
+| `ui-contacts:send` | `{ name, role, index, remaining, card, target }` | 每送出一則。 |
+| `ui-contacts:empty` | `{ name, role, card }` | 某人的訊息用完時。 |
+
+```js
+const c = document.querySelector('ui-contacts');
+c.send('Alf Bowman');  // 依名字、role、索引或 p-card 元素送出下一則，回傳 true / false
+c.send(0, 'chat2');    // 第二個參數可指定 ui-stream 的 id
+c.remaining('Alf Bowman');
+c.reset();             // 全部卡片恢復；c.reset('Alf Bowman') 只恢復一張。內容流不會清除
+c.cards;               // [{ name, role, total, sent }, …]
+```
+
+全頁預設值可寫在 `window.UiContactsConfig`，鍵名同屬性的駝峰寫法，例如 `{ cardTheme: 'cocoa', showStatus: true }`。所有樣式組合可在 `window.UiContacts.themes` 查看。
+
+---
+
+## ui-orbit.js
+
+`<ui-orbit>` 把一個核心概念放在中央，相關想法沿圓形軌道緩慢環繞。點一個想法的圖示或標籤，它會飛進右側插槽，軌道暫停，下方顯示該想法的說明；再點一次插槽裡的圖示，它會回到軌道並繼續轉動。適合腦力激盪、口說 Part 2 的發想示範。
+
+### 快速開始
+
+```html
+<script src="ui-orbit.js"></script>
+
+<ui-orbit radius="150" period="40" pause-on-hover>
+  <orbit-core icon="lightbulb" label="Describe a hobby" color="yellow"></orbit-core>
+  <orbit-item icon="camera" label="Photography" detail="d-photo"></orbit-item>
+  <orbit-item icon="bicycle" label="Cycling" detail="d-cycle" color="blue"></orbit-item>
+  <orbit-item icon="book" label="Reading" detail="d-read" ring="2"></orbit-item>
+</ui-orbit>
+
+<template id="d-photo"><p>可以談器材、拍攝地點、印象最深的一張照片。</p></template>
+```
+
+### `<ui-orbit>` 屬性
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `radius` | `150` | 第一圈軌道半徑（px）。 |
+| `ring-gap` | 依項目大小 | 圈與圈之間的距離（px）。 |
+| `item-size` | `56` | 想法圓圈直徑（px）。 |
+| `core-size` | `item-size` 的 2.3 倍 | 核心圓圈直徑（px）。 |
+| `label-width` | `170` | 標籤最大寬度（px）。 |
+| `label-gap` | `8` | 標籤與圓圈的距離（px）。 |
+| `label-lines` | `2` | 標籤最多幾行。 |
+| `label-size` | `0.95rem` | 標籤字級。 |
+| `size` | 自動 | 軌道區最小寬度（px）。 |
+| `period` | `40` | 轉一圈的秒數。 |
+| `direction` | `cw` | `cw` 順時針、`ccw` 逆時針。 |
+| `pause-on-hover` | 布林 | 滑鼠移到軌道區時暫停。 |
+| `accent` | `pink` | 插槽與說明區的強調色。 |
+| `ring-color` | `gray` | 軌道虛線顏色。 |
+| `slot-title` | `{label}` | 插槽標題，`{label}` 會換成想法名稱。 |
+| `placeholder` | `點軌道上的一個想法，它會停進這裡。` | 插槽空著時的提示。 |
+
+### `<orbit-core>`、`<orbit-item>` 屬性
+
+| 屬性 | 適用 | 預設 | 說明 |
+| --- | --- | --- | --- |
+| `icon` | 兩者 | `star-fill`、`circle` | Bootstrap Icons 名稱（不含 `bi-`）。 |
+| `label` | 兩者 | 無 | 名稱。 |
+| `color` | 兩者 | `yellow`、`key` | 圓圈顏色。 |
+| `ring` | `orbit-item` | `1` | 放在第幾圈軌道；同一圈的項目平均分布。 |
+| `detail` | `orbit-item` | 無 | 說明內容的 template 或元素 id。 |
+
+### 事件
+
+| 事件 | `detail` | 觸發時機 |
+| --- | --- | --- |
+| `ui-orbit:dock` | `{ label }` | 想法停進插槽時。 |
+| `ui-orbit:release` | `{ label }` | 想法離開插槽時。 |
+
+---
+
+## 授權
+
+本專案以 MIT 授權釋出。
+
+```
+MIT License
+
+Copyright (c) 2026 studyadvice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## play-maker.js
+
+`<play-maker>` 是製作 `<ui-play>` 與 `<ui-fillin>` 程式碼的工具頁元件，不需要記任何標籤或符號。直接打開 [`play-maker-demo-11-14-26.html`](play-maker-demo-11-14-26.html) 就能使用。
+
+### 操作流程
+
+1. 貼上句子，一行一句，按「放進編輯區」。文法修正也可以用表格輸入：原句、錯的字、改成、印章。
+2. 用滑鼠選取同一行裡的文字，下方會出現工具列。
+3. 中間的步驟清單可以上下移動、設定「等按鍵」「同時」「接續」、換顏色、刪除；點一下步驟會閃示對應的文字。
+4. 右邊即時預覽錄影版與練習版，按「複製 ui-play」或「複製 ui-fillin」取得程式碼。
+
+內容自動存在瀏覽器（localStorage），關掉網頁再打開還在。
+
+### 工具列
+
+| 按鈕 | 錄影版 ui-play | 練習版 ui-fillin |
+| --- | --- | --- |
+| `c-key`、其他色、清除色彩 | 包成 `<c-key>` 等色名標籤，不是步驟 | 保留色彩 |
+| 底線、圈起來、螢光筆、方框、刪除線、括號 | `mark-fx` | 不影響 |
+| 改寫 | `swap-fx`，可選刪改、替換、重打 | 勾選「練習版挖空」時變成空格，改寫後的字是答案，原字是干擾選項 |
+| 印章、註解 | `stamp-fx`、`note-fx` | 不影響 |
+| 挖空 | 不影響 | 選取的字是答案，另外輸入干擾選項；選項依字母排序 |
+| 每行右側的眼睛 | 這一行先隱藏，`show-fx` 播到才出現 | 不影響 |
+
+### 屬性
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `storage-key` | `default` | 草稿存放的名稱，用來區分不同專案。 |
+
+頁面上方的設定列可選外框、標題列文字、推進方式（`next-by`）、字級、id 前綴與練習版題型（選擇題或輸入題）。預覽需要同頁載入 `ui-play.js` 與 `ui-fillin.js`。

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>link-when 元件串接示範（11-19-26）</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body{background:#0C0D0C;color:#C6C7BD;font-size:1rem;}
+  .wrap{max-width:1600px;margin:0 auto;padding:24px 32px 80px 32px;}
+  h1{font-size:1.6rem;color:#DBEDD8;margin:0 0 6px 0;}
+  h1 code{color:#51DBCF;}
+  .sub{color:#86877F;font-size:0.95rem;margin:0 0 32px 0;}
+  h2{font-size:1.2rem;color:#B484E8;margin:0 0 8px 0;}
+  .desc{color:#A3C4BC;font-size:0.9rem;margin:0 0 12px 0;}
+  section{margin:0 0 56px 0;}
+  .two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:start;}
+  pre{background:#161716;border:1px solid #3B2A20;border-radius:8px;padding:14px 18px;color:#C6C7BD;font-size:0.78rem;margin:0;white-space:pre-wrap;}
+  table.attr{width:100%;border-collapse:collapse;font-size:0.88rem;}
+  table.attr th{text-align:left;color:#0C0D0C;background:#C6C7BD;padding:6px 12px;}
+  table.attr td{padding:7px 12px;border-bottom:1px solid #3B2A20;vertical-align:top;color:#DBEDD8;}
+  table.attr td:first-child{color:#51DBCF;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;}
+  table.attr td:nth-child(2){color:#E3D322;white-space:nowrap;}
+  .done-box{padding:12px 16px;border:1px solid #71CD76;border-radius:8px;color:#DBEDD8;margin:16px 0 0 0;}
+  #log{position:fixed;right:24px;bottom:24px;width:360px;z-index:50;}
+  .alert-lw{background:#3B2A20;color:#DBEDD8;border:1px solid #51DBCF;font-size:0.9rem;padding:8px 12px;margin:8px 0 0 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><code>&lt;link-when&gt;</code> 元件串接</h1>
+  <p class="sub">A 播完時對 B 執行動作，中間可以讓 A 淡出、收合或刪除，並讓 B 移到 A 的位置。本身不顯示任何畫面，不需要寫 JavaScript。不支援 ui-table 與 info-region。</p>
+
+  <!-- 範例 9（11-20-26 新增） -->
+  <section>
+    <h2>範例 9（11-20-26 新增）：點 ui-stream 訊息上的徽章，在目標容器產生圖表（do="feed" 搭配 detail.data）</h2>
+    <p class="desc">事件 <code>ui-stream:badge</code> 的 <code>detail.data</code> 是該則訊息 <code>data-chart</code> 的選擇器。<code>do="feed"</code> 沒寫 <code>template</code> 時，會複製它指向的 template（或元素）填進目標；後點的取代先前的，<code>feed-mode="append"</code> 則疊加。</p>
+    <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px;align-items:start">
+  <ui-stream id="lw9-st" autoplay height="320" speed="15" delay="300">
+    <stream-item from="teacher" name="老師" badge="看圖 1" badge-click data-chart="#lw9-tpl-a">先看海外遊客的變化。</stream-item>
+    <stream-item from="teacher" name="老師" badge="看圖 2" badge-click badge-color="playful" data-chart="#lw9-tpl-b">再看花費分布。</stream-item>
+  </ui-stream>
+  <div id="lw9-slot" style="height:340px;background:#242424;border:1px solid #3B2A20;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;color:#86877F">點左邊的徽章，圖表會出現在這裡</div>
+</div>
+<template id="lw9-tpl-a">
+  <ui-chart type="column" title="Visitors (thousands)" series="Local,Overseas" show-values>
+    <chart-row label="2020" values="48,21"></chart-row>
+    <chart-row label="2021" values="51,44"></chart-row>
+    <chart-row label="2022" values="53,61"></chart-row>
+  </ui-chart>
+</template>
+<template id="lw9-tpl-b">
+  <ui-chart type="pie" title="Tourist spending" unit="%" show-values>
+    <chart-row label="Accommodation" value="32"></chart-row>
+    <chart-row label="Food" value="26"></chart-row>
+    <chart-row label="Transport" value="14"></chart-row>
+    <chart-row label="Other" value="28"></chart-row>
+  </ui-chart>
+</template>
+<link-when source="#lw9-st" event="ui-stream:badge" target="#lw9-slot" do="feed"></link-when>
+<pre>&lt;div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px;align-items:start"&gt;
+  &lt;ui-stream id="lw9-st" autoplay height="320" speed="15" delay="300"&gt;
+    &lt;stream-item from="teacher" name="老師" badge="看圖 1" badge-click data-chart="#lw9-tpl-a"&gt;先看海外遊客的變化。&lt;/stream-item&gt;
+    &lt;stream-item from="teacher" name="老師" badge="看圖 2" badge-click badge-color="playful" data-chart="#lw9-tpl-b"&gt;再看花費分布。&lt;/stream-item&gt;
+  &lt;/ui-stream&gt;
+  &lt;div id="lw9-slot" style="height:340px;background:#242424;border:1px solid #3B2A20;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;color:#86877F"&gt;點左邊的徽章，圖表會出現在這裡&lt;/div&gt;
+&lt;/div&gt;
+&lt;template id="lw9-tpl-a"&gt;
+  &lt;ui-chart type="column" title="Visitors (thousands)" series="Local,Overseas" show-values&gt;
+    &lt;chart-row label="2020" values="48,21"&gt;&lt;/chart-row&gt;
+    &lt;chart-row label="2021" values="51,44"&gt;&lt;/chart-row&gt;
+    &lt;chart-row label="2022" values="53,61"&gt;&lt;/chart-row&gt;
+  &lt;/ui-chart&gt;
+&lt;/template&gt;
+&lt;template id="lw9-tpl-b"&gt;
+  &lt;ui-chart type="pie" title="Tourist spending" unit="%" show-values&gt;
+    &lt;chart-row label="Accommodation" value="32"&gt;&lt;/chart-row&gt;
+    &lt;chart-row label="Food" value="26"&gt;&lt;/chart-row&gt;
+    &lt;chart-row label="Transport" value="14"&gt;&lt;/chart-row&gt;
+    &lt;chart-row label="Other" value="28"&gt;&lt;/chart-row&gt;
+  &lt;/ui-chart&gt;
+&lt;/template&gt;
+&lt;link-when source="#lw9-st" event="ui-stream:badge" target="#lw9-slot" do="feed"&gt;&lt;/link-when&gt;</pre>
+  </section>
+
+  <!-- 範例 8（11-20-26 新增） -->
+  <section>
+    <h2>範例 8（11-20-26 新增）：md-editor 輸入內容送進 ui-stream 與 ui-post（do="feed"）</h2>
+    <p class="desc"><code>do="feed"</code> 把事件 <code>detail</code> 裡的輸入內容送進 B：B 是 <code>mode="live"</code> 的 <code>ui-post</code> 或 <code>ui-stream</code> 就呼叫 <code>add()</code>；寫了 <code>template="#id"</code> 就把輸入代入 template，填進 B 容器（<code>ui-play</code> 用這個方式）。每次送出都會處理，連續送出依序排隊。完整範例與屬性見 <a href="../editor/md-editor-demo-11-20-26.html">md-editor 範例頁</a>。</p>
+    <div class="two">
+      <div>
+        <md-editor id="ed8" name="Amy" rows="4" label-submit="送出"></md-editor>
+        <div style="height:16px"></div>
+        <ui-stream id="st8" mode="live" height="260"></ui-stream>
+        <div style="height:16px"></div>
+        <ui-post id="po8" mode="live" compact author="IELTS Examiner" time="1h" min-height="60">How often do you exercise?</ui-post>
+        <link-when source="#ed8" event="done" target="#st8" do="feed"></link-when>
+        <link-when source="#ed8" event="done" target="#po8" do="feed" item='{"likes":3}'></link-when>
+      </div>
+<pre>&lt;md-editor id="ed8" name="Amy"&gt;&lt;/md-editor&gt;
+&lt;ui-stream id="st8" mode="live" height="260"&gt;&lt;/ui-stream&gt;
+&lt;ui-post id="po8" mode="live"&gt;…&lt;/ui-post&gt;
+
+&lt;!-- md-editor 的 done 就是 md-submit --&gt;
+&lt;link-when source="#ed8" event="done" target="#st8" do="feed"&gt;&lt;/link-when&gt;
+&lt;!-- item 的 JSON 補充 add() 的欄位 --&gt;
+&lt;link-when source="#ed8" event="done" target="#po8" do="feed"
+           item='{"likes":3}'&gt;&lt;/link-when&gt;
+
+&lt;!-- 填進 ui-play：輸入代入 template，填進隱藏的容器 --&gt;
+&lt;link-when source="#ed8" event="done" target="#stage" do="feed"
+           template="#tpl-play"&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 7（11-20-26 新增） -->
+  <section>
+    <h2>範例 7（11-20-26 新增）：對話播完，A 縮小消失，B 在原位放大登場（swap="zoom"）</h2>
+    <p class="desc"><code>swap</code> 只有 <code>zoom</code> 和 <code>flip</code> 兩種。A 縮小（或翻走）的同時，高度也一路變成 B 的高度，結束後 A 被刪除、B 在原位接手，下方內容不會跳動。<code>swap-speed</code> 是整段（A 退場加 B 登場）的毫秒數，預設 800。</p>
+    <div class="two">
+      <div id="box7">
+        <ui-stream id="st7" autoplay speed="20" delay="300">
+          <stream-item from="student" name="Amy">I am looking forward to see you.</stream-item>
+          <stream-item from="teacher" name="老師">forward to 後面要接動名詞：<mark>seeing</mark>。</stream-item>
+        </ui-stream>
+        <div id="b7" class="done-box" hidden style="margin:0;"><i class="bi bi-check2-circle"></i> 這個區塊比對話短很多，高度會平順過渡。</div>
+        <link-when source="#st7" event="done" target="#b7" do="show" swap="zoom" swap-speed="900" delay="800"></link-when>
+      </div>
+<pre>&lt;ui-stream id="st7" autoplay&gt;…&lt;/ui-stream&gt;
+&lt;div id="b7" hidden&gt;…&lt;/div&gt;
+
+&lt;link-when source="#st7" event="done" target="#b7" do="show"
+           swap="zoom" swap-speed="900" delay="800"&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 6（11-20-26 新增） -->
+  <section>
+    <h2>範例 6（11-20-26 新增）：ui-post 結束，圓圈倒數 3、2、1 蓋住整個 A，再翻面換成 B（countdown + swap="flip"）</h2>
+    <p class="desc"><code>countdown</code> 的數字是起始值。覆蓋層會蓋住整個 A（A 捲動或改變大小都跟得上），中央是圓圈包著的數字；數完才開始 swap。覆蓋層本身也跟著 A 一起翻走。圓圈大小、粗細、顏色、數字顏色與覆蓋層底色都可以設定，顏色可寫色票名稱或色碼。</p>
+    <div class="two">
+      <div id="box6">
+        <ui-post id="post6" author="Nancy" compact time="2h" width="560" font-size="0.9rem" start-delay="300" typing="120">
+          我以為我說得很順，結果錯很大
+          <post-item author="Nelson" typing="120">I reached at the hotel on time.</post-item>
+        </ui-post>
+        <div id="b6" class="done-box" hidden style="margin:0;"><i class="bi bi-arrow-right-circle"></i> 倒數結束，下一題開始！</div>
+        <link-when source="#post6" event="done" target="#b6" do="show"
+                   countdown="3" countdown-size="130" countdown-width="8" countdown-color="pink"
+                   countdown-bg="background" countdown-cover="bg-alternative" countdown-interval="900"
+                   swap="flip" swap-speed="900" delay="600"></link-when>
+      </div>
+<pre>&lt;ui-post id="post6" …&gt;…&lt;/ui-post&gt;
+&lt;div id="b6" hidden&gt;…&lt;/div&gt;
+
+&lt;link-when source="#post6" event="done" target="#b6" do="show"
+           countdown="3" countdown-size="130" countdown-width="8"
+           countdown-color="pink" countdown-bg="background"
+           countdown-cover="bg-alternative" countdown-interval="900"
+           swap="flip" swap-speed="900" delay="600"&gt;&lt;/link-when&gt;
+
+&lt;!-- 倒數也可以搭配其他退場：exit="fade"、"collapse"、"remove" --&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 5（11-19-26 新增） -->
+  <section>
+    <h2>範例 5（11-19-26 新增）：maze-quiz 的 template 顯示後，接著顯示下一區塊</h2>
+    <p class="desc">迷宮走完、答案填入空格、<code>show-template</code> 的解說出現（<code>template-shown</code>）後，才顯示下一個提示。maze-quiz 有 <code>show-template</code> 時，<code>event="done"</code> 就是 <code>template-shown</code>；沒寫 <code>show-template</code> 時仍是 <code>maze-solved</code>。</p>
+    <div class="two">
+      <div>
+        <maze-quiz id="mz5" cols="14" rows="7" show-template="tpl5" question="If I _____ more time, I would learn to play the piano." answer="had"></maze-quiz>
+        <template id="tpl5"><div class="done-box" style="margin:12px 0 0 0;">If 子句用過去式，主要子句用 would + 原形動詞。</div></template>
+        <div id="end5" class="done-box" hidden><i class="bi bi-arrow-right-circle"></i> 解說看完了，下一題。</div>
+        <link-when source="#mz5" event="done" target="#end5" do="show" enter="slide-up" delay="600"></link-when>
+      </div>
+<pre>&lt;maze-quiz id="mz5" show-template="tpl5" question="…" answer="had"&gt;&lt;/maze-quiz&gt;
+&lt;template id="tpl5"&gt;…解說…&lt;/template&gt;
+&lt;div id="end5" hidden&gt;下一題&lt;/div&gt;
+
+&lt;!-- 有 show-template：done 等於 template-shown --&gt;
+&lt;link-when source="#mz5" event="done" target="#end5"
+           do="show" enter="slide-up" delay="600"&gt;&lt;/link-when&gt;
+
+&lt;!-- 也可以明確寫事件名稱 --&gt;
+&lt;link-when source="#mz5" event="template-shown" target="#end5" do="show"&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 4（11-19-26 新增） -->
+  <section>
+    <h2>範例 4（11-19-26 新增）：route-map 火車跑完，顯示下一區塊</h2>
+    <p class="desc">按鈕的 click 事件（<code>event="click"</code>）讓火車發車（<code>do="play"</code>），火車跑完（<code>event="done"</code>，即 <code>route-map:train-end</code> 且 <code>completed</code> 為 true）才顯示結論。火車被 <code>stop()</code> 中斷不會觸發。</p>
+    <div class="two">
+      <div>
+        <button id="go4" type="button" class="btn btn-outline-warning btn-sm mb-2"><i class="bi bi-play-fill"></i> 發車</button>
+        <route-map id="rm4" grid="32" cols="12" rows="4" label-zoom="1.4">
+          <route-line name="聽力線" color="blue" path="1,2 10,2">
+            <route-stop id="d4-a" at="1,2" label="n">聽力入門</route-stop>
+            <route-stop id="d4-b" at="10,2" label="n">地圖題</route-stop>
+          </route-line>
+          <route-train id="t4" from="d4-a" to="d4-b" icon="bi-train-front-fill" color="yellow" duration="3000"></route-train>
+        </route-map>
+        <div id="end4" class="done-box" hidden><i class="bi bi-flag"></i> 到站了，接著練地圖題。</div>
+        <link-when source="#go4" event="click" target="#rm4" do="play"></link-when>
+        <link-when source="#rm4" event="done" target="#end4" do="show" enter="slide-up"></link-when>
+      </div>
+<pre>&lt;button id="go4"&gt;發車&lt;/button&gt;
+&lt;route-map id="rm4" …&gt;
+  …
+  &lt;route-train id="t4" from="d4-a" to="d4-b" duration="3000"&gt;&lt;/route-train&gt;
+&lt;/route-map&gt;
+&lt;div id="end4" hidden&gt;到站了&lt;/div&gt;
+
+&lt;link-when source="#go4" event="click" target="#rm4" do="play"&gt;&lt;/link-when&gt;
+&lt;link-when source="#rm4" event="done" target="#end4"
+           do="show" enter="slide-up"&gt;&lt;/link-when&gt;
+
+&lt;!-- 多列火車時指定哪一列 --&gt;
+&lt;link-when source="#rm4" event="done" detail-match="id:t4" …&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 1 -->
+  <section>
+    <h2>範例 1：對話播完，換成模擬畫面（原地替換）</h2>
+    <p class="desc">ui-stream 播完 → 淡出 → ui-play 出現在同一個位置並開始播放。按「重新整理」可再看一次。</p>
+    <div class="two">
+      <div>
+        <ui-stream id="s1" autoplay delay="400" height="300" title="老師批改" title-size="1rem">
+          <stream-item from="student" name="Amy">Technology is very good for society.</stream-item>
+          <stream-item from="teacher" name="老師" typed speed="20">very good 太籠統了，我們來改。</stream-item>
+        </ui-stream>
+        <ui-play id="p1" hidden frame="win" frame-title="改寫示範" step-mode="auto" step-delay="500" font-size="1.4rem" min-height="300">
+          <stage-item><p id="p1s">Technology is very good for society.</p></stage-item>
+          <script-item>
+            <mark-fx target="#p1s" text="very good" kind="underline" color="red"></mark-fx>
+            <stamp-fx target="#p1s" text="very good" offset-y="54" shake="0">大錯特錯</stamp-fx>
+            <swap-fx target="#p1s" text="very good" to="indispensable"></swap-fx>
+          </script-item>
+        </ui-play>
+        <link-when source="#s1" event="done" target="#p1" do="play" delay="800" exit="fade" exit-speed="500" in-place></link-when>
+      </div>
+<pre>&lt;ui-stream id="s1" autoplay …&gt;…&lt;/ui-stream&gt;
+
+&lt;ui-play id="p1" hidden step-mode="auto" …&gt;…&lt;/ui-play&gt;
+
+&lt;link-when source="#s1" event="done"
+           target="#p1" do="play"
+           delay="800" exit="fade" exit-speed="500" in-place&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 2 -->
+  <section>
+    <h2>範例 2：組句答對，步驟前進一格</h2>
+    <p class="desc">sentence-build 答對（sb:complete）→ ui-steps 執行 next()。A 保留不動（exit 預設 none）。</p>
+    <div class="two">
+      <div>
+        <ui-steps id="st2" numbered line arrows accent="green" current="1">
+          <step-item label="組句"></step-item>
+          <step-item label="檢查"></step-item>
+          <step-item label="完成"></step-item>
+        </ui-steps>
+        <div style="height:12px"></div>
+        <sentence-build id="sb2" theme="green">
+          <chunk-item>The number of students</chunk-item>
+          <chunk-item>has risen</chunk-item>
+          <chunk-item>sharply</chunk-item>
+        </sentence-build>
+        <link-when source="#sb2" target="#st2" do="next"></link-when>
+      </div>
+<pre>&lt;ui-steps id="st2" numbered line arrows current="1"&gt;…&lt;/ui-steps&gt;
+&lt;sentence-build id="sb2"&gt;…&lt;/sentence-build&gt;
+
+&lt;!-- event 省略時就是 done，sentence-build 對應 sb:complete --&gt;
+&lt;link-when source="#sb2" target="#st2" do="next"&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 範例 3 -->
+  <section>
+    <h2>範例 3：連續串接</h2>
+    <p class="desc">chunk-demo 每個意群都換過寫法（chunk-end）→ 收合 → bp-stepper 以 pop 出現並自動推進 → 推進完（bps:complete）→ 顯示結論。</p>
+    <div class="two">
+      <div>
+        <chunk-demo id="cd3" sentence="She {0} to the market {1}." theme="blue" mode="dots">
+          <cd-chunk id="0" label="動詞"><cd-level>went</cd-level><cd-level>hurried</cd-level><cd-level>rushed excitedly</cd-level></cd-chunk>
+          <cd-chunk id="1" label="時間"><cd-level>yesterday</cd-level><cd-level>early in the morning</cd-level></cd-chunk>
+        </chunk-demo>
+        <bp-stepper id="bp3" hidden data-theme="blue" data-play-interval="900">
+          <bp-step><bp-step-title>換動詞</bp-step-title></bp-step>
+          <bp-step><bp-step-title>加時間</bp-step-title></bp-step>
+          <bp-step><bp-step-title>完成</bp-step-title></bp-step>
+        </bp-stepper>
+        <div id="end3" class="done-box" hidden><i class="bi bi-lightbulb"></i> 同一句話，換一個意群就能升級。</div>
+        <link-when source="#cd3" target="#bp3" do="play" exit="collapse" enter="pop" in-place></link-when>
+        <link-when source="#bp3" target="#end3" do="show" enter="slide-up"></link-when>
+      </div>
+<pre>&lt;chunk-demo id="cd3" …&gt;…&lt;/chunk-demo&gt;
+&lt;bp-stepper id="bp3" hidden data-play-interval="900"&gt;…&lt;/bp-stepper&gt;
+&lt;div id="end3" hidden&gt;…&lt;/div&gt;
+
+&lt;link-when source="#cd3" target="#bp3" do="play"
+           exit="collapse" enter="pop" in-place&gt;&lt;/link-when&gt;
+&lt;link-when source="#bp3" target="#end3" do="show" enter="slide-up"&gt;&lt;/link-when&gt;</pre>
+    </div>
+  </section>
+
+  <!-- 屬性 -->
+  <section>
+    <h2>&lt;link-when&gt; 屬性</h2>
+    <table class="attr">
+      <tr><th>屬性</th><th>預設值</th><th>說明</th></tr>
+      <tr><td>source</td><td>必填</td><td>A 的選擇器。</td></tr>
+      <tr><td>event</td><td>done</td><td>done 代表 A 播完或完成，依元件自動對應（見下表）；也可寫任何事件名稱，例如 sb:check、ladder-change。</td></tr>
+      <tr><td>target</td><td>必填</td><td>B 的選擇器。B 可以先加 hidden 藏起來，觸發時會自動顯示。</td></tr>
+      <tr><td>do</td><td>play</td><td>對 B 做什麼：play、next、reset、show（只顯示）、hide、scroll（捲到 B），或 B 身上任何方法名稱。</td></tr>
+      <tr><td>delay</td><td>0</td><td>A 觸發後等多久才開始（ms）。</td></tr>
+      <tr><td>exit</td><td>none</td><td>A 的退場：none 保留；hide 隱藏；fade 淡出後隱藏；collapse 收合後隱藏；remove 從頁面刪除。</td></tr>
+      <tr><td>exit-speed</td><td>400</td><td>fade、collapse 的時間（ms）。</td></tr>
+      <tr><td>exit-gap</td><td>0</td><td>A 消失後，等多久 B 才開始（ms）。</td></tr>
+      <tr><td>in-place</td><td>不設</td><td>B 移到 A 原本的位置（A 被刪除也可以）。</td></tr>
+      <tr><td>enter</td><td>fade</td><td>B 原本隱藏時的進場效果：fade、slide-up、slide-down、zoom、pop、none。</td></tr>
+      <tr><td>enter-speed</td><td>500</td><td>進場時間（ms）。</td></tr>
+      <tr><td>swap</td><td>不設</td><td>A 縮小（zoom）或翻走（flip）並刪除，B 在原位登場；A 的高度同步過渡到 B 的高度，版面不跳動。設定後忽略 exit、exit-gap、enter，B 一律回到 A 的位置（in-place="false" 可關閉）。</td></tr>
+      <tr><td>swap-speed</td><td>800</td><td>swap 整段時間（ms），A 退場與 B 登場各占一半。</td></tr>
+      <tr><td>countdown</td><td>不設</td><td>倒數起始值，例如 3 會顯示 3、2、1。覆蓋層蓋住整個 A，數完才退場或 swap。</td></tr>
+      <tr><td>countdown-interval</td><td>1000</td><td>每個數字停留的時間（ms）。</td></tr>
+      <tr><td>countdown-size</td><td>120</td><td>圓圈直徑（px），最大不超過 A 較短邊減 16。</td></tr>
+      <tr><td>countdown-width</td><td>6</td><td>圓圈外框粗細（px）。</td></tr>
+      <tr><td>countdown-color</td><td>key</td><td>圓圈外框與數字的顏色，色票名稱或色碼。</td></tr>
+      <tr><td>countdown-bg</td><td>background</td><td>圓圈內的底色。</td></tr>
+      <tr><td>countdown-cover</td><td>background</td><td>蓋住 A 的覆蓋層底色。</td></tr>
+      <tr><td>countdown-font-size</td><td>圓圈的一半</td><td>數字字級（rem），預設依圓圈大小自動計算。</td></tr>
+      <tr><td>once</td><td>true</td><td>只觸發一次；false 則每次 A 發出事件都觸發。</td></tr>
+    </table>
+    <p class="desc" style="margin-top:12px">順序：A 觸發 → delay → countdown → A 退場 → exit-gap → B 移位（in-place）→ B 進場 → 對 B 執行 do。過程中在 link-when 上發出 link-when:start 與 link-when:done 事件；也可以用 JavaScript 呼叫 el.fire() 手動觸發。</p>
+
+    <h2 style="margin-top:28px">event="done" 對照</h2>
+    <table class="attr">
+      <tr><th>元件</th><th>對應事件</th><th>說明</th></tr>
+      <tr><td>ui-play</td><td>play-end</td><td></td></tr>
+      <tr><td>ui-stream</td><td>ui-stream:done</td><td></td></tr>
+      <tr><td>ui-blank</td><td>cli-end／blank-submit</td><td>mode="cli" 為播完，其他為送出答案。</td></tr>
+      <tr><td>ui-detail-ladder</td><td>ladder-end</td><td></td></tr>
+      <tr><td>bp-stepper</td><td>bps:complete</td><td>本次新增 next()、play()、pause()、reset()、data-play-interval。</td></tr>
+      <tr><td>ui-steps</td><td>steps:end</td><td>本次新增，另有 steps:change；方法 next()、prev()、play()、pause()、reset()、setCurrent(n)，屬性 play-interval。</td></tr>
+      <tr><td>sentence-build</td><td>sb:complete</td><td>本次新增，答對或顯示答案時觸發；另有 sb:check、sb:timeout、sb:reset；方法 check()、showAnswer()、reset()、nextQuestion()。</td></tr>
+      <tr><td>chunk-demo</td><td>chunk-end</td><td>本次新增，每個未鎖定的意群都換過寫法時觸發一次；另有 chunk-change；方法 resetProgress()。</td></tr>
+      <tr><td>arrow-flow</td><td>flow-complete</td><td></td></tr>
+      <tr><td>slider-show</td><td>finished</td><td></td></tr>
+      <tr><td>ui-layer-diff</td><td>layerend</td><td></td></tr>
+      <tr><td>dino-deck</td><td>dino:done</td><td></td></tr>
+      <tr><td>ui-drag-ans</td><td>drag-ans:complete</td><td></td></tr>
+      <tr><td>ui-post</td><td>post-end</td><td></td></tr>
+      <tr><td>ui-screen</td><td>ui-screen:end</td><td></td></tr>
+      <tr><td>maze-quiz</td><td>maze-solved／template-shown</td><td>有 show-template 時為 template-shown（11-19-26 新增）。</td></tr>
+      <tr><td>tetris-quiz</td><td>tetris-cleared／template-shown</td><td>棋盤完全消除時為 tetris-cleared；有 show-template 時為 template-shown（11-19-26 新增）。</td></tr>
+      <tr><td>ui-check</td><td>ui-check-done</td><td></td></tr>
+      <tr><td>ui-icon-anim</td><td>anim-end</td><td></td></tr>
+      <tr><td>ui-fillin</td><td>fillin-submit</td><td>送出即觸發，不分對錯。</td></tr>
+      <tr><td>ui-mask</td><td>mask-reveal</td><td></td></tr>
+      <tr><td>route-map</td><td>route-map:train-end</td><td>11-19-26 新增。只有火車跑完（completed 為 true）才觸發，被 stop() 中斷不算。</td></tr>
+    </table>
+  </section>
+</div>
+
+<div id="log"></div>
+
+<script src="../flow/ui-stream.js"></script>
+<script src="../flow/ui-play.js"></script>
+<script src="../sb/sentence-build.js"></script>
+<script src="../layout/ui-steps.js"></script>
+<script src="../chunk-demo.js"></script>
+<script src="../bp-stepper.js"></script>
+<script src="../tour/route-map.js"></script>
+<script src="../maze/maze-quiz.js"></script>
+<script src="../post/ui-post.js"></script>
+<script src="../editor/md-editor.js"></script>
+<script src="../charts/ui-charts.js"></script>
+<script src="link-when.js"></script>
+<script>
+  /* 每次串接完成，在右下角以 Bootstrap alert 顯示 */
+  document.addEventListener('link-when:done', function (e) {
+    var t = e.detail.target, a = e.detail.source;
+    var d = document.createElement('div');
+    d.className = 'alert alert-lw';
+    d.textContent = '串接完成：' + (a ? a.localName + '#' + a.id : '?') + ' → ' + (t ? t.localName + '#' + t.id : '?');
+    document.getElementById('log').appendChild(d);
+    setTimeout(function () { d.remove(); }, 4000);
+  });
+</script>
+</body>
+</html>

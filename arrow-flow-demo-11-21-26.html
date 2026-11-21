@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arrow-flow 範例</title>
+<style>
+  :root {
+    --bg: #0C0D0C; --shell: #C6C7BD; --vanilla: #DBEDD8; --yellow: #E3D322; --blue: #5DBAE8;
+    --gray: #86877F; --line: #3B2A20;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--shell); }
+  body { font-family: "微軟正黑體", "Inter", sans-serif; font-size: 1rem; line-height: 1.7; margin: 0; }
+  .page { max-width: 1680px; margin: 0 auto; padding: 32px 40px 80px 40px; }
+  h1 { color: var(--vanilla); font-size: 2rem; font-weight: 700; margin: 0 0 8px 0; }
+  .lead-note { color: var(--gray); margin: 0 0 24px 0; }
+  .lead-note a { color: var(--blue); text-decoration: none; }
+  .lead-note a:hover { text-decoration: underline; }
+  .lead-note b { color: var(--yellow); }
+  .version { color: var(--blue); font-size: 1.25rem; font-weight: 700; margin: 32px 0 12px 0; }
+  .frame { display: block; width: 100%; height: 480px; border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>arrow-flow</h1>
+  <p class="lead-note">本檔合併 3 組範例，越新的放越上面。每個版本維持原本的畫面與程式碼，放在各自獨立的區塊，所以樣式與腳本不會互相影響。<br>
+  <b>程式化控制</b>：<a href="#v-api">next()、reset()、current、total</a><br>
+  <b>10-21-26</b>：<a href="#v-10-21-26">arrow-flow v2.0 Demo</a><br>
+  <b>09-22-26</b>：<a href="#v-09-22-26">arrow-flow 元件示範</a></p>
+
+  <section class="ver" id="v-api">
+    <h2 class="version">程式化控制：next()、reset()、current、total</h2>
+    <iframe class="frame" id="f-api" data-src="src-api" title="arrow-flow 程式化控制" scrolling="no"></iframe>
+  </section>
+  <section class="ver" id="v-10-21-26">
+    <h2 class="version">10-21-26：arrow-flow v2.0 Demo</h2>
+    <iframe class="frame" id="f-10-21-26" data-src="src-10-21-26" title="arrow-flow 10-21-26" scrolling="no"></iframe>
+  </section>
+  <section class="ver" id="v-09-22-26">
+    <h2 class="version">09-22-26：arrow-flow 元件示範</h2>
+    <iframe class="frame" id="f-09-22-26" data-src="src-09-22-26" title="arrow-flow 09-22-26" scrolling="no"></iframe>
+  </section>
+</div>
+
+<script type="text/plain" id="src-api">
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arrow-flow 程式化控制</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0C0D0C; color: #C6C7BD; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 1.125rem; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 32px 48px 32px; }
+  .section { margin-bottom: 56px; }
+  .section-h2 { font-size: 1.5rem; font-weight: 700; color: #DBEDD8; margin-bottom: 8px; }
+  .section-desc { font-size: 1rem; color: #86877F; margin-bottom: 20px; line-height: 1.6; }
+  .section-desc code { color: #B484E8; font-family: 'Courier New', monospace; }
+  .ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 20px 0 0 0; }
+  .btn { padding: 8px 20px; border: 2px solid #5DBAE8; border-radius: 4px; background: #0C0D0C; color: #5DBAE8; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .btn:hover { background: #5DBAE8; color: #0C0D0C; }
+  .btn.reset { border-color: #EF6661; color: #EF6661; }
+  .btn.reset:hover { background: #EF6661; color: #0C0D0C; }
+  .btn.pick { border-color: #B6FF00; color: #B6FF00; }
+  .btn.pick:hover { background: #B6FF00; color: #0C0D0C; }
+  .status { margin-top: 16px; padding: 12px 20px; background: #2D2D2D; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 1rem; color: #DBEDD8; }
+  .status b { color: #E3D322; }
+  .done-msg { margin-top: 20px; padding: 14px 20px; background: #2D2D2D; border-left: 3px solid #71CD76; color: #71CD76; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <section class="section">
+    <h2 class="section-h2">直線流程：next() 與 reset()</h2>
+    <p class="section-desc">按鈕呼叫 <code>flow.next()</code> 與 <code>flow.reset()</code>，箭頭仍然可以點。走完後出現結尾區塊，重設後再次隱藏。</p>
+    <arrow-flow id="f1" theme="blue" arrow-glow on-complete="done-1">
+      <flow-step title="讀題">先圈出題目的關鍵字。</flow-step>
+      <flow-step title="定位">回到文章找出對應段落。</flow-step>
+      <flow-step title="作答">比對同義改寫後作答。</flow-step>
+    </arrow-flow>
+    <div class="done-msg" id="done-1">流程完成，接著做練習題。</div>
+    <div class="ctrl">
+      <button class="btn" id="b1-next" type="button">next()</button>
+      <button class="btn reset" id="b1-reset" type="button">reset()</button>
+    </div>
+    <div class="status" id="s1"></div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-h2">分支流程：next(label) 選路線</h2>
+    <p class="section-desc">停在分支時，<code>next()</code> 沒有參數不會動作，要傳序號或 <code>label</code> 選路線。選好之後，<code>next()</code> 推進該路線的下一步，走完後後面的主流程步驟自動揭示。<code>total</code> 只算主流程，所以這裡是 2。</p>
+    <arrow-flow id="f2" theme="green" branch-label-theme="energetic" arrow-glow on-complete="done-2">
+      <flow-step title="確認題型">判斷是圖表題還是流程題。</flow-step>
+      <flow-branch>
+        <branch-option label="圖表題" theme="blue">
+          <flow-step title="找趨勢">先看最高點與最低點。</flow-step>
+          <flow-step title="找比較">挑兩組資料互相比較。</flow-step>
+        </branch-option>
+        <branch-option label="流程題" theme="playful">
+          <flow-step title="找階段">依順序列出每個階段。</flow-step>
+        </branch-option>
+        <branch-option label="沒設 theme">
+          <flow-step title="預設色">按鈕顏色取自 branch-label-theme。</flow-step>
+        </branch-option>
+      </flow-branch>
+      <flow-step title="寫總結">兩種題型都以概述收尾。</flow-step>
+    </arrow-flow>
+    <div class="done-msg" id="done-2">分支流程完成。</div>
+    <div class="ctrl">
+      <button class="btn pick" id="b2-a" type="button">next('圖表題')</button>
+      <button class="btn pick" id="b2-b" type="button">next(1)</button>
+      <button class="btn" id="b2-next" type="button">next()</button>
+      <button class="btn reset" id="b2-reset" type="button">reset()</button>
+    </div>
+    <div class="status" id="s2"></div>
+  </section>
+
+</div>
+
+<script src="arrow-flow.js"><\/script>
+<script>
+  window.addEventListener('load', function () {
+    function wire(flow, out, hint) {
+      var last = '';
+      function show() {
+        out.innerHTML = 'current = <b>' + flow.current + '</b>，total = <b>' + flow.total + '</b>' + (last ? '，上一次呼叫回傳 <b>' + last + '</b>' : '');
+      }
+      ['step-change', 'branch-select', 'flow-complete'].forEach(function (n) { flow.addEventListener(n, show); });
+      show();
+      return {
+        call: function (fn) { last = String(fn()); show(); },
+        reset: function () { last = ''; flow.reset(); show(); }
+      };
+    }
+
+    var f1 = document.getElementById('f1');
+    var w1 = wire(f1, document.getElementById('s1'));
+    document.getElementById('b1-next').addEventListener('click', function () { w1.call(function () { return f1.next(); }); });
+    document.getElementById('b1-reset').addEventListener('click', function () { w1.reset(); });
+
+    var f2 = document.getElementById('f2');
+    var w2 = wire(f2, document.getElementById('s2'));
+    document.getElementById('b2-a').addEventListener('click', function () { w2.call(function () { return f2.next('圖表題'); }); });
+    document.getElementById('b2-b').addEventListener('click', function () { w2.call(function () { return f2.next(1); }); });
+    document.getElementById('b2-next').addEventListener('click', function () { w2.call(function () { return f2.next(); }); });
+    document.getElementById('b2-reset').addEventListener('click', function () { w2.reset(); });
+  });
+<\/script>
+</body>
+</html>
+</script>
+
+<script type="text/plain" id="src-10-21-26">
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arrow-flow v2.0 Demo</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0C0D0C;
+    --shell:    #C6C7BD;
+    --violet: #B484E8;
+    --blue:      #5DBAE8;
+    --green:     #71CD76;
+    --energetic:   #B6FF00;
+    --indigo:   #778CE1;
+    --blue:    #5DBAE8;
+    --green:     #71CD76;
+    --green:  #71CD76;
+    --energetic:   #B6FF00;
+    --yellow:   #E3D322;
+    --warning:  #EF6661;
+    --pink:     #FF91D7;
+  }
+  html, body { background: var(--bg); color: var(--shell); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 18px; }
+
+  .page { max-width: 1400px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  /* ── 頁首 ── */
+  .pg-header { padding: 48px 0 40px; border-bottom: 1px solid rgba(198,199,189,0.14); margin-bottom: 48px; }
+  .pg-header h1 { font-size: 2.2rem; font-weight: 800; color: var(--blue); letter-spacing: -0.01em; }
+  .pg-header p  { font-size: 1rem; color: rgba(198,199,189,0.70); margin-top: 8px; }
+  .ver-badge { display: inline-block; background: rgba(130,200,229,0.12); border: 1px solid rgba(130,200,229,0.30); color: var(--blue); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 4px; margin-right: 10px; }
+
+  /* ── 段落標題 ── */
+  .section { margin-bottom: 60px; }
+  .section-title {
+    font-size: 0.82rem; font-weight: 700; letter-spacing: 0.10em;
+    color: rgba(198,199,189,0.50); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .section-h2 { font-size: 1.45rem; font-weight: 700; color: var(--shell); margin-bottom: 6px; }
+  .section-desc { font-size: 0.95rem; color: rgba(198,199,189,0.60); margin-bottom: 24px; line-height: 1.5; }
+
+  /* ── Attr Chip ── */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip {
+    font-size: 0.75rem; font-family: 'Courier New', monospace;
+    background: rgba(195,165,229,0.10); border: 1px solid rgba(195,165,229,0.25);
+    color: var(--violet); padding: 3px 9px; border-radius: 3px; white-space: nowrap;
+  }
+
+  /* ── 完成提示 ── */
+  .done-msg {
+    margin-top: 20px; padding: 14px 20px;
+    background: rgba(39,174,96,0.10); border-left: 3px solid var(--green);
+    color: var(--green); font-size: 1rem; font-weight: 600;
+  }
+
+  /* ── 分隔線 ── */
+  hr.divider { border: none; border-top: 1px solid rgba(198,199,189,0.10); margin: 56px 0; }
+
+  /* ── 屬性速查表 ── */
+  .ref-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 16px; }
+  .ref-table th { background: rgba(198,199,189,0.07); color: var(--shell); font-weight: 700; padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(198,199,189,0.14); }
+  .ref-table td { padding: 9px 14px; border-bottom: 1px solid rgba(198,199,189,0.06); vertical-align: top; color: rgba(198,199,189,0.80); line-height: 1.4; }
+  .ref-table td:first-child { font-family: 'Courier New', monospace; color: var(--violet); white-space: nowrap; }
+  .ref-table td:nth-child(2) { color: var(--blue); font-family: 'Courier New', monospace; font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <\!-- 頁首 -->
+  <header class="pg-header">
+    <div>
+      <span class="ver-badge">v2.0</span>
+      <h1>arrow-flow.js</h1>
+    </div>
+    <p>樣式屬性全面彈性化 · 多分支路徑支援 · 合流主流程 · No Shadow DOM</p>
+  </header>
+
+  <\!-- ══════════════════════════════════════════════════
+       範例 1：預設樣式（最小設定）
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Example 01</div>
+    <h2 class="section-h2">預設樣式（最少屬性）</h2>
+    <p class="section-desc">僅設定 <code>theme</code>，其餘全部使用全域預設值。</p>
+    <div class="chip-row">
+      <span class="chip">theme="blue"</span>
+      <span class="chip">reveal="cumulative"</span>
+    </div>
+
+    <arrow-flow theme="blue" reveal="cumulative" on-complete="done-1">
+      <flow-step title="需求確認">收集使用者需求，確認範疇與優先順序。</flow-step>
+      <flow-step title="設計規劃">輸出線框稿與設計規格文件。</flow-step>
+      <flow-step title="開發實作">依規格進行前後端開發。</flow-step>
+      <flow-step title="測試上線">QA 驗收通過後部署至正式環境。</flow-step>
+    </arrow-flow>
+
+    <div class="done-msg" id="done-1">流程完成！</div>
+  </section>
+
+  <hr class="divider">
+
+  <\!-- ══════════════════════════════════════════════════
+       範例 2：完整樣式屬性展示
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Example 02</div>
+    <h2 class="section-h2">完整樣式屬性展示</h2>
+    <p class="section-desc">header 漸層、左側強調線、箭頭發光、自訂陰影、字距、行高全部開啟。</p>
+    <div class="chip-row">
+      <span class="chip">theme="violet"</span>
+      <span class="chip">header-gradient="down"</span>
+      <span class="chip">header-accent-line="left"</span>
+      <span class="chip">arrow-glow</span>
+      <span class="chip">box-shadow="0 4px 24px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)"</span>
+      <span class="chip">border-width="3px"</span>
+      <span class="chip">border-radius="8px"</span>
+      <span class="chip">header-font-size="1rem"</span>
+      <span class="chip">header-letter-spacing="0.06em"</span>
+      <span class="chip">content-line-height="1.45"</span>
+      <span class="chip">arrow-tip="lg"</span>
+      <span class="chip">arrow-style="dashed"</span>
+    </div>
+
+    <arrow-flow
+      theme="violet"
+      header-gradient="down"
+      header-accent-line="left"
+      arrow-glow
+      box-shadow="0 4px 24px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)"
+      border-width="3px"
+      border-radius="8px"
+      header-font-size="1rem"
+      header-letter-spacing="0.06em"
+      content-font-size="1.05rem"
+      content-line-height="1.45"
+      arrow-tip="lg"
+      arrow-style="dashed"
+      gap="80px"
+      on-complete="done-2">
+      <flow-step title="原料入庫" header-color="indigo" border-color="indigo">
+        掃描條碼並核對採購單，不符規格者立即退貨。
+      </flow-step>
+      <flow-step title="品質檢驗" header-color="violet">
+        依 ISO 標準進行抽樣，合格率需達 99.5% 以上。
+      </flow-step>
+      <flow-step title="生產製造">
+        自動化產線介入，人工監控異常警報。
+      </flow-step>
+    </arrow-flow>
+
+    <div class="done-msg" id="done-2">流程完成！</div>
+  </section>
+
+  <hr class="divider">
+
+  <\!-- ══════════════════════════════════════════════════
+       範例 3：top 強調線 + 固定欄寬 + 單次顯示
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Example 03</div>
+    <h2 class="section-h2">Top 強調線 + 固定欄寬 + 單次顯示模式</h2>
+    <p class="section-desc">
+      <code>header-accent-line="top"</code> 在 header 頂部加橫線。<code>reveal="single"</code> 讓前一步驟淡出。<code>step-width="260px"</code> 固定每欄寬度。
+    </p>
+    <div class="chip-row">
+      <span class="chip">theme="green"</span>
+      <span class="chip">header-accent-line="top"</span>
+      <span class="chip">header-gradient="up"</span>
+      <span class="chip">reveal="single"</span>
+      <span class="chip">step-width="260px"</span>
+      <span class="chip">border-radius="2px"</span>
+    </div>
+
+    <arrow-flow
+      theme="green"
+      header-accent-line="top"
+      header-gradient="up"
+      reveal="single"
+      step-width="260px"
+      border-radius="2px"
+      gap="56px"
+      on-complete="done-3">
+      <flow-step title="初始化">環境準備與依賴安裝。</flow-step>
+      <flow-step title="資料遷移">舊資料庫匯出並轉換格式。</flow-step>
+      <flow-step title="服務啟動">執行健康檢查後切換流量。</flow-step>
+      <flow-step title="監控確認">觀察 15 分鐘確認無異常告警。</flow-step>
+    </arrow-flow>
+
+    <div class="done-msg" id="done-3">部署完成！</div>
+  </section>
+
+  <hr class="divider">
+
+  <\!-- ══════════════════════════════════════════════════
+       範例 4：多分支（基本）
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Example 04</div>
+    <h2 class="section-h2">多分支 — 兩條路徑，無後續合流</h2>
+    <p class="section-desc">
+      選擇分支後，未選的路徑淡化（<code>branch-dim</code>），被選路徑逐步展開。
+    </p>
+    <div class="chip-row">
+      <span class="chip">flow-branch</span>
+      <span class="chip">branch-option label="…" theme="…"</span>
+      <span class="chip">branch-label-theme="energetic"</span>
+      <span class="chip">branch-dim="0.22"</span>
+    </div>
+
+    <arrow-flow
+      theme="blue"
+      branch-label-theme="energetic"
+      branch-dim="0.22"
+      header-gradient="down"
+      box-shadow="0 2px 12px rgba(0,0,0,.40)"
+      on-complete="done-4">
+      <flow-step title="客戶提出需求">業務收到詢問並建立案件。</flow-step>
+      <flow-branch>
+        <branch-option label="標準產品" theme="green">
+          <flow-step title="確認型號">核對產品目錄，確認庫存。</flow-step>
+          <flow-step title="開立報價">依標準售價產出報價單。</flow-step>
+          <flow-step title="客戶簽回">獲得書面確認後進入出貨流程。</flow-step>
+        </branch-option>
+        <branch-option label="客製訂單" theme="energetic">
+          <flow-step title="需求訪談" header-color="energetic" border-color="energetic">深入訪談，輸出規格書草案。</flow-step>
+          <flow-step title="工程評估">研發部門評估可行性與成本。</flow-step>
+          <flow-step title="報價審核">業務主管核准後送交客戶。</flow-step>
+          <flow-step title="訂單確認">簽署合約後排程生產。</flow-step>
+        </branch-option>
+      </flow-branch>
+    </arrow-flow>
+
+    <div class="done-msg" id="done-4">銷售流程完成！</div>
+  </section>
+
+  <hr class="divider">
+
+  <\!-- ══════════════════════════════════════════════════
+       範例 5：分支 + 合流（前置 → 分支 → 後置）
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Example 05</div>
+    <h2 class="section-h2">分支 + 合流 — 完整流程</h2>
+    <p class="section-desc">
+      共同起點步驟 → 多分支 → 分支走完後自動解鎖後續共同步驟，實現「分流再合流」。
+    </p>
+    <div class="chip-row">
+      <span class="chip">前置 flow-step</span>
+      <span class="chip">flow-branch（三選一）</span>
+      <span class="chip">後置 flow-step（合流）</span>
+    </div>
+
+    <arrow-flow
+      theme="green"
+      branch-label-theme="green"
+      branch-dim="0.20"
+      header-gradient="down"
+      header-accent-line="left"
+      arrow-glow
+      border-radius="6px"
+      box-shadow="0 6px 28px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06)"
+      on-complete="done-5">
+
+      <flow-step title="申請受理">
+        收件人員確認申請資料齊全，登錄系統並產生案號。
+      </flow-step>
+
+      <flow-branch>
+        <branch-option label="線上快速審核" theme="blue">
+          <flow-step title="自動比對">系統比對資料庫，30 秒內完成初核。</flow-step>
+          <flow-step title="線上簽核">主管電子簽名後立即生效。</flow-step>
+        </branch-option>
+        <branch-option label="人工審核" theme="energetic">
+          <flow-step title="指派審核員">依業務量輪派至可用人員。</flow-step>
+          <flow-step title="實地查核">必要時安排實地訪查（2-5 個工作天）。</flow-step>
+          <flow-step title="委員會決議">超過授權額度案件提交委員會。</flow-step>
+        </branch-option>
+        <branch-option label="補件退回" theme="red">
+          <flow-step title="通知缺件" header-color="red" border-color="red">
+            系統發送 Email／SMS 說明缺件項目及補件期限。
+          </flow-step>
+          <flow-step title="等待補件">申請人於 10 個工作天內補齊資料。</flow-step>
+        </branch-option>
+      </flow-branch>
+
+      <flow-step title="核定結果通知">
+        無論採哪條路徑，最終均發送正式核定函，並更新案件狀態。
+      </flow-step>
+      <flow-step title="結案歸檔">
+        文件數位化後存入電子檔案系統，保存七年。
+      </flow-step>
+    </arrow-flow>
+
+    <div class="done-msg" id="done-5">審核流程全部完成！</div>
+  </section>
+
+  <hr class="divider">
+
+  <\!-- ══════════════════════════════════════════════════
+       屬性速查表
+  ═══════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-title">Reference</div>
+    <h2 class="section-h2">屬性速查表</h2>
+
+    <table class="ref-table">
+      <thead>
+        <tr>
+          <th>屬性（kebab-case）</th>
+          <th>預設值</th>
+          <th>說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>theme</td><td>"shell"</td><td>主色系，palette key 或任意 hex 值</td></tr>
+        <tr><td>header-color</td><td>同 theme</td><td>header 背景色覆寫（可於 flow-step 個別設定）</td></tr>
+        <tr><td>border-color</td><td>同 theme</td><td>邊框色覆寫</td></tr>
+        <tr><td>arrow-color</td><td>同 theme</td><td>箭頭填色覆寫</td></tr>
+        <tr><td>arrow-tip</td><td>"md"</td><td>箭頭尖端大小：sm / md / lg / xl</td></tr>
+        <tr><td>arrow-style</td><td>"solid"</td><td>箭頭桿樣式：solid / dashed</td></tr>
+        <tr><td>arrow-glow</td><td>false（布林屬性）</td><td>啟用箭頭 SVG drop-shadow 發光效果</td></tr>
+        <tr><td>gap</td><td>"72px"</td><td>箭頭欄寬度，可用任意 CSS 長度單位</td></tr>
+        <tr><td>reveal</td><td>"cumulative"</td><td>步驟顯示模式：cumulative（累積）/ single（單次）</td></tr>
+        <tr><td>animation</td><td>"fade"</td><td>進場動畫：fade / slide / none</td></tr>
+        <tr><td>equal-height</td><td>false（布林屬性）</td><td>強制所有步驟盒子等高</td></tr>
+        <tr><td>current</td><td>0</td><td>初始已展開到第幾個主流程步驟（從 0 起算）</td></tr>
+        <tr><td>step-width</td><td>null（flex:1）</td><td>固定步驟欄寬，如 "240px"</td></tr>
+        <tr><td>box-shadow</td><td>"none"</td><td>盒子 CSS box-shadow，可疊加多層用逗號分隔</td></tr>
+        <tr><td>border-width</td><td>"2.5px"</td><td>邊框粗細</td></tr>
+        <tr><td>border-radius</td><td>"5px"</td><td>盒子圓角大小</td></tr>
+        <tr><td>header-gradient</td><td>"none"</td><td>header 背景漸層方向：down / up / none</td></tr>
+        <tr><td>header-accent-line</td><td>"none"</td><td>header 強調線位置：left / top / none</td></tr>
+        <tr><td>header-font-size</td><td>"1.125rem"</td><td>header 文字大小</td></tr>
+        <tr><td>header-letter-spacing</td><td>"0"</td><td>header 字距（em 單位建議）</td></tr>
+        <tr><td>content-font-size</td><td>"1.125rem"</td><td>內容區文字大小</td></tr>
+        <tr><td>content-line-height</td><td>"1.5"</td><td>內容區行高</td></tr>
+        <tr><td>branch-label-theme</td><td>"green"</td><td>分支選擇按鈕顏色，palette key 或 hex</td></tr>
+        <tr><td>branch-dim</td><td>"0.80"</td><td>未選中分支路徑的透明度</td></tr>
+        <tr><td>on-complete</td><td>null</td><td>流程全部完成後顯示的元素 id</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+<script src="arrow-flow.js"><\/script>
+</body>
+</html>
+
+</script>
+<script type="text/plain" id="src-09-22-26">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>arrow-flow 元件示範</title>
+  <script src="arrow-flow.js"><\/script>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0C0D0C;
+      --shell:    #C6C7BD;
+      --violet: #B484E8;
+      --blue:      #5DBAE8;
+      --warning:  #EF6661;
+      --energetic:   #B6FF00;
+      --blue:    #5DBAE8;
+      --green:     #71CD76;
+      --green:     #71CD76;
+      --vanilla:  #DBEDD8;
+      --yellow:   #E3D322;
+      --focus:    #DBEDD8;
+      --green:  #71CD76;
+      --info:     #778CE1;
+      --indigo:   #778CE1;
+      --pink:     #FF91D7;
+      --energetic:   #B6FF00;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--shell);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 1.125rem;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    ::-webkit-scrollbar { width: 7px; background: #111312; }
+    ::-webkit-scrollbar-thumb { background: rgba(198,199,189,0.28); border-radius: 4px; }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ── Page header ─────────────────────────────────────────────── */
+    .page-hdr {
+      border-bottom: 1px solid rgba(130,200,229,0.15);
+      padding: 52px 0 44px;
+      margin-bottom: 64px;
+    }
+    .page-hdr .wrap { display: flex; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+    .hdr-left h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--blue);
+      line-height: 1.1;
+    }
+    .hdr-left p {
+      margin-top: 8px;
+      color: rgba(198,199,189,0.76);
+      font-size: 1rem;
+    }
+    .hdr-badge {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 3px;
+      font-size: 0.825rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      background: rgba(130,200,229,0.12);
+      border: 1px solid rgba(130,200,229,0.3);
+      color: var(--blue);
+    }
+
+    /* ── Section wrapper ─────────────────────────────────────────── */
+    .demo-sec {
+      margin-bottom: 80px;
+    }
+    .sec-head {
+      margin-bottom: 20px;
+    }
+    .sec-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--violet);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(195,165,229,0.14);
+      border: 1.5px solid rgba(195,165,229,0.5);
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--violet);
+      flex-shrink: 0;
+    }
+    .sec-desc {
+      color: rgba(198,199,189,0.72);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    .sec-desc code {
+      background: rgba(195,165,229,0.12);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.9em;
+      color: var(--violet);
+    }
+
+    /* ── Divider ─────────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(198,199,189,0.09);
+      margin: 72px 0;
+    }
+
+    /* ── Content helpers (inside flow-step bodies) ───────────────── */
+    .af-ct ul  { padding-left: 20px; }
+    .af-ct li  { margin-bottom: 4px; }
+    .af-ct b, .af-ct strong { color: var(--blue); font-weight: 700; }
+    .af-ct em  { color: var(--violet); font-style: normal; font-weight: 600; }
+    .af-ct a   { color: var(--blue); }
+    .af-ct code {
+      background: rgba(195,165,229,0.12);
+      padding: 2px 6px; border-radius: 3px;
+      font-family: monospace; font-size: 0.9em;
+      color: var(--violet);
+    }
+    .af-ct p { margin-top: 8px; }
+    .af-ct p:first-child { margin-top: 0; }
+
+    /* ── Result panel (on-complete target) ──────────────────────── */
+    .result-panel {
+      margin-top: 24px;
+      padding: 22px 26px;
+      background: rgba(39,174,96,0.10);
+      border: 1.5px solid rgba(39,174,96,0.45);
+      border-radius: 8px;
+    }
+    .result-panel h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    .result-panel p {
+      color: rgba(179,222,115,0.86);
+      margin: 0;
+    }
+
+    /* ── Arrow-tip showcase ──────────────────────────────────────── */
+    .tip-rows { display: flex; flex-direction: column; gap: 16px; }
+    .tip-row  {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .tip-label {
+      width: 42px;
+      flex-shrink: 0;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--energetic);
+      text-align: right;
+    }
+    .tip-row arrow-flow { flex: 1; }
+
+    /* ── Global config demo ──────────────────────────────────────── */
+    .config-demo-wrap {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .config-code {
+      background: #0f100f;
+      border: 1px solid rgba(195,165,229,0.22);
+      border-radius: 7px;
+      padding: 18px 20px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.9rem;
+      color: var(--green);
+      flex: 0 0 auto;
+      max-width: 380px;
+      line-height: 1.5;
+    }
+    .config-code .c-key   { color: var(--violet); }
+    .config-code .c-str   { color: var(--energetic); }
+    .config-code .c-num   { color: var(--yellow); }
+    .config-code .c-fn    { color: var(--blue); }
+    .config-code .c-cm    { color: rgba(198,199,189,0.4); }
+    .config-result        { flex: 1; min-width: 280px; }
+
+    /* ── Bootstrap-style alert for event log ────────────────────── */
+    .ev-log {
+      background: #0f100f;
+      border: 1px solid rgba(198,199,189,0.14);
+      border-radius: 7px;
+      padding: 14px;
+      min-height: 72px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .ev-placeholder { color: rgba(198,199,189,0.34); font-size: 0.95rem; }
+    .ev-entry {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      padding: 7px 12px;
+      border-radius: 5px;
+      margin-bottom: 6px;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+    .ev-entry:last-child { margin-bottom: 0; }
+    .ev-step {
+      background: rgba(35,81,219,0.16);
+      border: 1px solid rgba(35,81,219,0.45);
+      color: var(--blue);
+    }
+    .ev-done {
+      background: rgba(39,174,96,0.14);
+      border: 1px solid rgba(39,174,96,0.45);
+      color: var(--green);
+    }
+    .ev-time {
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: rgba(198,199,189,0.4);
+      flex-shrink: 0;
+    }
+    .ev-msg { flex: 1; }
+    .ev-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: monospace;
+      opacity: 0.76;
+    }
+
+    /* ── API reference code block ────────────────────────────────── */
+    .api-block {
+      background: #0f100f;
+      border: 1px solid rgba(195,165,229,0.18);
+      border-radius: 7px;
+      padding: 20px 22px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      color: var(--shell);
+    }
+    .api-block pre { margin: 0; white-space: pre; color: inherit; background: transparent; }
+    .a-attr  { color: var(--blue); }
+    .a-val   { color: var(--energetic); }
+    .a-cm    { color: rgba(198,199,189,0.38); }
+    .a-tag   { color: var(--violet); }
+    .a-js    { color: var(--green); }
+
+    /* ── Palette swatch row ──────────────────────────────────────── */
+    .swatch-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .swatch-chip {
+      width: 36px; height: 36px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .swatch-name {
+      font-size: 0.72rem;
+      font-family: monospace;
+      color: rgba(198,199,189,0.6);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 36px 0 52px;
+      color: rgba(198,199,189,0.35);
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(198,199,189,0.09);
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <\!-- ══ Page Header ════════════════════════════════════════════════════ -->
+  <header class="page-hdr">
+    <div class="wrap">
+      <div class="hdr-left">
+        <h1>&lt;arrow-flow&gt;</h1>
+        <p>步驟式流程元件 · 品牌色系 · 無 Shadow DOM · 無外部依賴</p>
+      </div>
+      <div class="hdr-badge">
+        <span class="badge">v1.0</span>
+        <span class="badge">Custom Element</span>
+        <span class="badge">No dependencies</span>
+        <span class="badge">09/22/26</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <\!-- ══ DEMO 1: Basic ══════════════════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">1</span>基本用法
+        </h2>
+        <p class="sec-desc">
+          <code>theme="blue"</code> · <code>gap="72px"</code> · <code>animation="fade"</code>（預設）·
+          點擊箭頭展開下一步
+        </p>
+      </div>
+
+      <arrow-flow theme="blue" gap="72px">
+        <flow-step title="填寫申請表">
+          上傳所需文件並填寫基本資料。
+          <ul>
+            <li>身分證正反面掃描</li>
+            <li>戶口名簿影本</li>
+            <li>最近三個月薪資單</li>
+          </ul>
+        </flow-step>
+        <flow-step title="資料審核">
+          送交審核部門，通常需要 <strong>3 至 5 個工作天</strong>。
+          審核期間可透過會員中心查詢即時進度。
+        </flow-step>
+        <flow-step title="核准通知">
+          審核完成後，系統將以 <em>簡訊</em> 及 <em>電子郵件</em> 雙重通知。
+          核准後請於 30 天內完成後續手續。
+        </flow-step>
+      </arrow-flow>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 2: Color Override ══════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">2</span>顏色覆蓋
+        </h2>
+        <p class="sec-desc">
+          <code>theme="green"</code> 設定全域色 · 第 2 步驟個別設定
+          <code>header-color="red"</code> · <code>border-color="energetic"</code> ·
+          <code>arrow-tip="lg"</code>
+        </p>
+      </div>
+
+      <arrow-flow theme="green" arrow-tip="lg" gap="80px">
+        <flow-step title="輸入訂單資料">
+          填寫收件人資訊及訂購品項。支援多筆批次上傳（CSV 格式），
+          單次最多 500 筆。
+        </flow-step>
+        <flow-step title="⚠ 付款驗證" header-color="red" border-color="energetic">
+          <strong>請注意：</strong>此步驟將進行信用卡授權確認。
+          授權失敗時訂單將自動取消。
+          <p>請確認以下事項已完成：</p>
+          <ul>
+            <li>卡片有效期限未到期</li>
+            <li>帳戶餘額充足</li>
+            <li>已啟用網路交易功能</li>
+          </ul>
+        </flow-step>
+        <flow-step title="訂單確認完成">
+          付款成功後，訂單號碼將顯示於此頁面並同步寄送確認信。
+          標準配送時間為 <strong>2 至 3 個工作天</strong>。
+        </flow-step>
+      </arrow-flow>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 3: equal-height + on-complete ═════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">3</span>等高模式 + 完成後顯示
+        </h2>
+        <p class="sec-desc">
+          <code>equal-height</code> 強制所有框等高（取最大值）·
+          <code>on-complete="demo3-result"</code> 完成後顯示結果面板 ·
+          此示範同時連結事件監聽（見 Demo 6）
+        </p>
+      </div>
+
+      <arrow-flow id="demo3" theme="violet" arrow-tip="md"
+                  equal-height on-complete="demo3-result">
+        <flow-step title="選擇方案">
+          請選擇最符合您需求的訂閱方案：
+          <ul>
+            <li><strong>基本版</strong> — 每月 $299，5 位成員</li>
+            <li><strong>專業版</strong> — 每月 $799，25 位成員</li>
+            <li><strong>企業版</strong> — 客製報價，無限成員</li>
+          </ul>
+        </flow-step>
+        <flow-step title="建立帳號">
+          輸入電子郵件與設定密碼，完成後系統將發送驗證信至您的信箱。
+          帳號驗證有效期限為 24 小時。
+        </flow-step>
+        <flow-step title="付款設定">
+          支援信用卡、銀行轉帳及第三方支付。
+          訂閱將於付款確認後 <strong>立即生效</strong>。
+          帳單週期為每月 1 日自動扣款，可隨時取消。
+        </flow-step>
+      </arrow-flow>
+
+      <\!-- on-complete target — hidden on init, revealed on flow-complete -->
+      <div id="demo3-result" class="result-panel">
+        <h3>🎉 訂閱設定完成！</h3>
+        <p>您的帳號已啟用，歡迎開始使用服務。如有任何問題請聯絡客服支援。</p>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 4: Single Reveal + Slide ══════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">4</span>單框模式
+        </h2>
+        <p class="sec-desc">
+          <code>reveal="single"</code> 前框淡出保留版面 ·
+          <code>animation="slide"</code> · <code>theme="energetic"</code> · 四步驟行程規劃
+        </p>
+      </div>
+
+      <arrow-flow theme="energetic" reveal="single" animation="slide" gap="64px">
+        <flow-step title="Day 1 — 抵達">
+          入住飯店後整理行李，傍晚步行至鄰近夜市探索在地美食。
+          建議早點休息以備隔日滿檔行程。
+        </flow-step>
+        <flow-step title="Day 2 — 文化景點">
+          上午參觀博物館，下午前往知名廟宇與歷史街區拍照留念。
+          晚餐可選擇當地特色餐廳或精緻料理。
+        </flow-step>
+        <flow-step title="Day 3 — 戶外活動">
+          清晨健行至觀景台欣賞日出，下午安排水上活動或腳踏車租借。
+          傍晚可在濱海大道悠閒散步。
+        </flow-step>
+        <flow-step title="Day 4 — 返程">
+          退房後將行李寄存，輕鬆逛街度過最後幾小時再前往機場。
+          建議提前 <strong>3 小時</strong> 抵達辦理登機手續。
+        </flow-step>
+      </arrow-flow>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 5: Arrow Tip Comparison ═══════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">5</span>箭頭尖端大小比較
+        </h2>
+        <p class="sec-desc">
+          <code>arrow-tip</code> 控制頭部三角形比例，箭桿粗細固定不變 ·
+          <code>theme="indigo"</code> · 點擊各箭頭可展開第二框
+        </p>
+      </div>
+
+      <div class="tip-rows">
+        <div class="tip-row">
+          <span class="tip-label">sm</span>
+          <arrow-flow theme="indigo" arrow-tip="sm" gap="72px">
+            <flow-step title="起點">初始步驟內容。</flow-step>
+            <flow-step title="終點">下一步驟內容。</flow-step>
+          </arrow-flow>
+        </div>
+        <div class="tip-row">
+          <span class="tip-label">md</span>
+          <arrow-flow theme="indigo" arrow-tip="md" gap="72px">
+            <flow-step title="起點">初始步驟內容。</flow-step>
+            <flow-step title="終點">下一步驟內容。</flow-step>
+          </arrow-flow>
+        </div>
+        <div class="tip-row">
+          <span class="tip-label">lg</span>
+          <arrow-flow theme="indigo" arrow-tip="lg" gap="72px">
+            <flow-step title="起點">初始步驟內容。</flow-step>
+            <flow-step title="終點">下一步驟內容。</flow-step>
+          </arrow-flow>
+        </div>
+        <div class="tip-row">
+          <span class="tip-label">xl</span>
+          <arrow-flow theme="indigo" arrow-tip="xl" gap="72px">
+            <flow-step title="起點">初始步驟內容。</flow-step>
+            <flow-step title="終點">下一步驟內容。</flow-step>
+          </arrow-flow>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 6: Global Config ════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">6</span>全域設定 ArrowFlow.config()
+        </h2>
+        <p class="sec-desc">
+          在元素初始化前呼叫 <code>ArrowFlow.config()</code>
+          可設定全站預設值，接受 camelCase 或 kebab-case 鍵名
+        </p>
+      </div>
+
+      <div class="config-demo-wrap">
+        <div class="config-code">
+<span class="c-cm">// 頁面載入後、&lt;arrow-flow&gt; 初始化前呼叫</span>
+<span class="c-fn">ArrowFlow</span>.<span class="c-fn">config</span>({
+  <span class="c-key">theme</span>      : <span class="c-str">'blue'</span>,
+  <span class="c-key">arrowTip</span>  : <span class="c-str">'xl'</span>,  <span class="c-cm">// or 'arrow-tip'</span>
+  <span class="c-key">gap</span>        : <span class="c-str">'88px'</span>,
+  <span class="c-key">animation</span> : <span class="c-str">'slide'</span>,
+  <span class="c-key">reveal</span>    : <span class="c-str">'cumulative'</span>,
+});
+<span class="c-cm">// 下方元素無需任何屬性即套用以上設定</span></div>
+
+        <div class="config-result">
+          <arrow-flow id="demo6">
+            <flow-step title="Config 預設值">
+              此元素未設定任何屬性，色彩與箭頭樣式全部來自
+              <code>ArrowFlow.config()</code>。
+            </flow-step>
+            <flow-step title="繼承生效">
+              config 中設定的 <code>theme</code>、<code>arrowTip</code>、
+              <code>animation</code> 全數套用。
+            </flow-step>
+            <flow-step title="屬性優先">
+              若在 HTML 上加了個別屬性，該屬性優先於全域 config。
+            </flow-step>
+          </arrow-flow>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 7: Event Log ═══════════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">7</span>事件監聽
+        </h2>
+        <p class="sec-desc">
+          操作上方「Demo 3 — 等高模式」，事件即時顯示於下方
+        </p>
+      </div>
+      <div class="ev-log" id="ev-log">
+        <div class="ev-placeholder">（操作 Demo 3 的箭頭後，事件訊息將出現於此…）</div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ Palette Reference ════════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">8</span>品牌色盤
+        </h2>
+        <p class="sec-desc">
+          所有色彩名稱均可直接用於 <code>theme</code>、
+          <code>header-color</code>、<code>border-color</code>、<code>arrow-color</code> 屬性
+        </p>
+      </div>
+      <div class="swatch-row" id="swatch-row"></div>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 8a: dashed arrow ═══════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num" style="background:rgba(28,202,232,0.12);border-color:rgba(28,202,232,0.45);color:var(--blue)">─</span>虛線箭頭
+        </h2>
+        <p class="sec-desc">
+          <code>arrow-style="dashed"</code> · 桿以圓頭虛線繪製，箭頭三角形保持實心 ·
+          省略或設 <code>"solid"</code> 為預設實線
+        </p>
+      </div>
+
+      <p class="sec-desc" style="margin-bottom:14px;">
+        ▸ <code>arrow-style="dashed"</code> + <code>theme="blue"</code> + <code>arrow-tip="lg"</code>
+      </p>
+      <arrow-flow theme="blue" arrow-style="dashed" arrow-tip="lg" gap="80px">
+        <flow-step title="需求分析">
+          與利害關係人訪談，整理功能需求清單並確認優先級。
+        </flow-step>
+        <flow-step title="原型設計">
+          使用低保真線框圖進行快速驗證，收集回饋後調整。
+        </flow-step>
+        <flow-step title="開發上線">
+          分批交付功能，持續整合並在每個 Sprint 結束時部署至測試環境。
+        </flow-step>
+      </arrow-flow>
+
+      <p class="sec-desc" style="margin:28px 0 14px;">
+        ▸ <code>arrow-style="dashed"</code> + <code>arrow-tip="sm"</code> + <code>theme="yellow"</code> · 對比風格
+      </p>
+      <arrow-flow theme="yellow" arrow-style="dashed" arrow-tip="sm" gap="64px">
+        <flow-step title="收集">蒐集原始資料並建立資料倉儲。</flow-step>
+        <flow-step title="清理">移除重複值與異常值，補全缺失欄位。</flow-step>
+        <flow-step title="分析">產出報表與視覺化圖表，供決策使用。</flow-step>
+      </arrow-flow>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ DEMO 8b: step-width ════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num" style="background:rgba(237,161,9,0.14);border-color:rgba(237,161,9,0.5);color:var(--energetic)">+</span>框寬度設定
+        </h2>
+        <p class="sec-desc">
+          <code>step-width</code> 屬性設定所有框的固定寬度 ·
+          個別 <code>&lt;flow-step width="…"&gt;</code> 可覆蓋全域值 ·
+          未設定時預設 <code>flex:1</code>（均分剩餘空間）
+        </p>
+      </div>
+
+      <p class="sec-desc" style="margin-bottom:14px;">
+        ▸ <code>step-width="220px"</code>：所有框固定 220px，超出容器可橫向捲動
+      </p>
+      <div style="overflow-x:auto; padding-bottom:4px;">
+        <arrow-flow theme="vanilla" step-width="220px" gap="56px">
+          <flow-step title="資料收集">收集原始數據並進行前處理。</flow-step>
+          <flow-step title="特徵工程">選取關鍵特徵，執行標準化。</flow-step>
+          <flow-step title="模型訓練">分割訓練集與驗證集，開始訓練。</flow-step>
+          <flow-step title="評估上線">計算指標後部署至生產環境。</flow-step>
+        </arrow-flow>
+      </div>
+
+      <p class="sec-desc" style="margin:24px 0 14px;">
+        ▸ 個別 <code>&lt;flow-step width="…"&gt;</code>：各框獨立寬度
+      </p>
+      <arrow-flow theme="vanilla" gap="48px">
+        <flow-step title="輸入（窄）" width="160px">
+          固定 160px。
+        </flow-step>
+        <flow-step title="處理（中）" width="280px">
+          固定 280px，較寬以容納較多內容說明。
+        </flow-step>
+        <flow-step title="輸出（窄）" width="160px">
+          固定 160px。
+        </flow-step>
+      </arrow-flow>
+    </section>
+
+    <hr class="divider">
+
+    <\!-- ══ API Reference ════════════════════════════════════════════ -->
+    <section class="demo-sec">
+      <div class="sec-head">
+        <h2 class="sec-title">
+          <span class="sec-num">9</span>API 速查
+        </h2>
+      </div>
+      <div class="api-block">
+        <pre>
+<span class="a-cm">&lt;!-- ─── &lt;arrow-flow&gt; 屬性 ──────────────────────────────────────────────── --&gt;</span>
+<span class="a-tag">&lt;arrow-flow</span>
+  <span class="a-attr">theme</span>=<span class="a-val">"blue"</span>             <span class="a-cm">&lt;!-- 全部框統一品牌色 (預設: shell)               --&gt;</span>
+  <span class="a-attr">header-color</span>=<span class="a-val">"blue"</span>    <span class="a-cm">&lt;!-- 覆蓋所有框 header 底色（優先於 theme）       --&gt;</span>
+  <span class="a-attr">border-color</span>=<span class="a-val">"blue"</span>    <span class="a-cm">&lt;!-- 覆蓋所有框線色                               --&gt;</span>
+  <span class="a-attr">arrow-color</span>=<span class="a-val">"shell"</span>  <span class="a-cm">&lt;!-- 箭頭填色（預設繼承 theme）                   --&gt;</span>
+  <span class="a-attr">arrow-tip</span>=<span class="a-val">"md"</span>       <span class="a-cm">&lt;!-- sm / md / lg / xl（只改頭部三角形）          --&gt;</span>
+  <span class="a-attr">arrow-style</span>=<span class="a-val">"solid"</span>  <span class="a-cm">&lt;!-- solid（預設實線）/ dashed（虛線桿＋實心頭）  --&gt;</span>
+  <span class="a-attr">gap</span>=<span class="a-val">"72px"</span>           <span class="a-cm">&lt;!-- 框間距（整個可點擊箭頭區域的寬度）           --&gt;</span>
+  <span class="a-attr">reveal</span>=<span class="a-val">"cumulative"</span> <span class="a-cm">&lt;!-- cumulative（前框保留）/ single（前框淡出）   --&gt;</span>
+  <span class="a-attr">animation</span>=<span class="a-val">"fade"</span>    <span class="a-cm">&lt;!-- fade / slide / none                         --&gt;</span>
+  <span class="a-attr">equal-height</span>          <span class="a-cm">&lt;!-- Boolean：強制所有框等高（取最大值）           --&gt;</span>
+  <span class="a-attr">current</span>=<span class="a-val">"0"</span>          <span class="a-cm">&lt;!-- 初始顯示至第幾框（0-based）                  --&gt;</span>
+  <span class="a-attr">on-complete</span>=<span class="a-val">"div-id"</span> <span class="a-cm">&lt;!-- 完成後顯示的 div id（初始自動隱藏）          --&gt;</span>
+  <span class="a-attr">step-width</span>=<span class="a-val">"240px"</span>   <span class="a-cm">&lt;!-- 所有框固定寬度（省略 = flex:1 均分）          --&gt;</span>
+<span class="a-tag">&gt;</span>
+  <span class="a-tag">&lt;flow-step</span>
+    <span class="a-attr">title</span>=<span class="a-val">"標題"</span>
+    <span class="a-attr">header-color</span>=<span class="a-val">"violet"</span>  <span class="a-cm">&lt;!-- 覆蓋此框 header 底色 --&gt;</span>
+    <span class="a-attr">border-color</span>=<span class="a-val">"indigo"</span>    <span class="a-cm">&lt;!-- 覆蓋此框框線色       --&gt;</span>
+    <span class="a-attr">width</span>=<span class="a-val">"300px"</span>           <span class="a-cm">&lt;!-- 覆蓋此框寬度（優先於 step-width） --&gt;</span>
+  <span class="a-tag">&gt;</span>
+    支援 &lt;strong&gt;HTML&lt;/strong&gt; 標籤、&lt;ul&gt; 列表等
+  <span class="a-tag">&lt;/flow-step&gt;</span>
+<span class="a-tag">&lt;/arrow-flow&gt;</span>
+
+<span class="a-cm">/* ─── 全域設定 ───────────────────────────────────────────────────────── */</span>
+<span class="a-js">ArrowFlow</span>.config({
+  theme      : 'blue',
+  arrowTip   : 'lg',    <span class="a-cm">// 同 arrow-tip 屬性，接受 camelCase 或 kebab-case</span>
+  gap        : '80px',
+  animation  : 'slide',
+  reveal     : 'cumulative',
+  equalHeight: true,
+  stepWidth  : '260px', <span class="a-cm">// 同 step-width 屬性</span>
+  arrowStyle : 'dashed',<span class="a-cm">// 同 arrow-style 屬性</span>
+});
+
+<span class="a-cm">/* ─── 事件 ───────────────────────────────────────────────────────────── */</span>
+el.addEventListener(<span class="a-val">'step-change'</span>,   e =&gt; console.log(e.detail.index));
+el.addEventListener(<span class="a-val">'flow-complete'</span>, e =&gt; console.log(e.detail.totalSteps));
+
+<span class="a-cm">/* ─── 品牌色名 ── 17 色 ─────────────────────────────────────────────── */</span>
+bg  shell  violet  blue  warning  energetic  blue  green  green
+vanilla  yellow  focus  green  info  indigo  pink  dreamy</pre>
+      </div>
+    </section>
+
+  </div><\!-- /wrap -->
+
+  <footer>
+    <div class="wrap">
+      arrow-flow.js · 示範頁 09/22/26 · 無 Shadow DOM · 無外部依賴
+    </div>
+  </footer>
+
+  <script>
+    /* ── Apply global config for Demo 6 ── */
+    ArrowFlow.config({
+      theme    : 'blue',
+      arrowTip : 'xl',
+      gap      : '88px',
+      animation: 'slide',
+    });
+
+    /* ── Wait for DOM then reset config to defaults for other demos ──
+       (config was already read by all elements via deferred _init microtask,
+        but Demo 6 element uses the config set above because it was
+        set before _init runs. All demos 1-5 were already in DOM before
+        the config call — their _init microtasks read the updated DEF.
+        To avoid side effects in demos 1-5, set the demo6 config LAST.)
+       Actually all elements defer _init via Promise.resolve().then(),
+       so all microtasks read DEF AFTER the config call above.
+       We therefore wrap demos 1-5 in explicit attribute overrides to
+       ensure they win over the global config. This is intentional:
+       per-element attributes always override global config. ── */
+
+    /* ── Event log: attach to Demo 3 ── */
+    document.addEventListener('DOMContentLoaded', () => {
+      const demo3 = document.getElementById('demo3');
+      const log   = document.getElementById('ev-log');
+
+      function addEntry(msg, type) {
+        const ph = log.querySelector('.ev-placeholder');
+        if (ph) ph.remove();
+
+        const now  = new Date();
+        const ts   = [now.getHours(), now.getMinutes(), now.getSeconds()]
+                       .map(n => String(n).padStart(2, '0')).join(':');
+
+        const row  = document.createElement('div');
+        row.className = `ev-entry ev-${type}`;
+        row.innerHTML =
+          `<span class="ev-time">${ts}</span>` +
+          `<span class="ev-tag">${type === 'done' ? 'flow-complete' : 'step-change'}</span>` +
+          `<span class="ev-msg">${msg}</span>`;
+        log.appendChild(row);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      demo3.addEventListener('step-change', e => {
+        addEntry(`index: <strong>${e.detail.index}</strong>`, 'step');
+      });
+      demo3.addEventListener('flow-complete', e => {
+        addEntry(`totalSteps: <strong>${e.detail.totalSteps}</strong> · 完成！`, 'done');
+      });
+
+      /* ── Generate palette swatches ── */
+      const swatchRow = document.getElementById('swatch-row');
+      const palette   = ArrowFlow.PALETTE;
+      Object.keys(palette).forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'swatch';
+        div.innerHTML =
+          `<div class="swatch-chip" style="background:${palette[name]}"></div>` +
+          `<span class="swatch-name">${name}</span>`;
+        swatchRow.appendChild(div);
+      });
+    });
+  <\/script>
+</body>
+</html>
+
+</script>
+
+<script>
+(function () {
+  /* 每個版本的完整原始 HTML 放在 script[type="text/plain"]，載入時才寫入 iframe。
+     原始碼裡的結束 script 標籤與 HTML 註解開頭，為了能放進 script 標籤而被轉義，這裡還原。 */
+  var HELPER = '<style>html,body{min-height:0!important;height:auto!important}</style>' +
+    '<script>(function(){var id="__ID__",last=0;' +
+    'function post(){var h=Math.ceil(document.documentElement.getBoundingClientRect().height);' +
+    'if(Math.abs(h-last)>1){last=h;parent.postMessage({demoFrame:id,h:h},"*");}}' +
+    'new ResizeObserver(post).observe(document.documentElement);addEventListener("load",post);' +
+    'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href^=\'#\']");' +
+    'if(!a)return;e.preventDefault();var k=a.getAttribute("href").slice(1);' +
+    'var t=k&&document.getElementById(decodeURIComponent(k));if(t)t.scrollIntoView();});})();<\/script>';
+  var frames = document.querySelectorAll('iframe.frame');
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || !d.demoFrame) return;
+    var f = document.getElementById(d.demoFrame);
+    if (f && !f.classList.contains('fixed')) f.style.height = Math.min(d.h, 30000) + 'px';
+  });
+  frames.forEach(function (f) {
+    var src = document.getElementById(f.dataset.src).textContent
+      .replace(/<\\\/script/g, '<' + '/script').replace(/<\\!--/g, '<' + '!--');
+    f.srcdoc = src + HELPER.replace('__ID__', f.id);
+  });
+})();
+</script>
+</body>
+</html>

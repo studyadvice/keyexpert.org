@@ -1,0 +1,176 @@
+# link-when
+
+`<link-when>` 把兩個元件串起來：A 播完（或發出指定事件）時，對 B 執行動作，例如開始播放、前進一步、顯示出來。中間可以讓 A 淡出、收合或刪除，並把 B 移到 A 的位置，錄影時畫面焦點不會跳走。元素本身不顯示任何畫面，不需要寫 JavaScript。不支援 `ui-table` 與 `info-region`。
+
+互動範例：[`link-when-demo-11-19-26.html`](link-when-demo-11-19-26.html)。把輸入內容送進其他元件（`do="feed"`）的完整範例見 [`../editor/md-editor-demo-11-20-26.html`](../editor/md-editor-demo-11-20-26.html)。
+
+A 結束後換成 B，並用倒數圓圈蓋住 A、再翻面離開：
+
+```html
+<link-when source="#post1" event="done" target="#next" do="show"
+           countdown="3" countdown-color="pink" countdown-size="130"
+           swap="flip" swap-speed="900"></link-when>
+```
+
+```html
+<ui-stream id="s1" autoplay>…</ui-stream>
+<ui-play id="p1" hidden step-mode="auto">…</ui-play>
+
+<link-when source="#s1" event="done" target="#p1" do="play"
+           delay="800" exit="fade" in-place></link-when>
+```
+
+只在特定一則訊息出現時觸發，例如 `ui-stream` 的第 4 則（`ui-stream:item` 的 `detail.index` 從 0 開始）：
+
+```html
+<link-when source="#s1" event="ui-stream:item" detail-match="index:3"
+           target="#next-btn" do="show" enter="slide-up"></link-when>
+```
+
+搭配其他元件的常見寫法：
+
+```html
+<!-- ui-blank 答對才顯示下一區塊 -->
+<link-when source="#blank1" event="blank-submit" detail-match="valid:true"
+           target="#next" do="show" enter="slide-up"></link-when>
+
+<!-- bp-popnote 便條展開時顯示下一區塊 -->
+<link-when source="#my-fold" event="bpn-fold" detail-match="open:true"
+           target="#next" do="show"></link-when>
+
+<!-- 用 call 呼叫全域函式：A 完成時展開便條 -->
+<link-when source="#s1" target="#my-fold" call="BpPopnote.fold" call-arg="true"></link-when>
+```
+
+`ui-otp` 不在 `done` 對照表內，請明確寫 `event="otp-complete"`。`maze-quiz` 想在答案填入、`<template>` 內容顯示後才串接，寫了 `show-template` 就可以用 `event="done"`，也可以明確寫 `event="template-shown"`（`template-shown` 發自 `maze-quiz` 本身，不是 template）。`route-map` 的 `done` 指火車跑完（`completed:true`），地圖上有多列火車時任何一列跑完都會觸發，要指定哪一列請加 `detail-match="id:火車的id"`；`do="play"` 只會播第一列火車，要播指定的火車改用 `call`（`call="playTrain" call-arg="t2"`，函式收到 B 與 `call-arg`）。`ui-blank`、`ui-otp` 都有 `reset()`、`focus()` 可用 `do` 呼叫。
+
+處理順序：A 觸發 → `delay` → `countdown` → A 退場（`exit`）→ `exit-gap` → B 移位（`in-place`）→ B 進場（`enter`）→ 對 B 執行 `do`。
+
+## 屬性
+
+| 屬性 | 預設 | 說明 |
+| --- | --- | --- |
+| `source` | 必填 | A 的選擇器。 |
+| `event` | `done` | `done` 依元件自動對應到完成事件（見下表）；也可寫任何事件名稱。 |
+| `detail-match` | 不設 | 事件的 `detail` 符合條件才觸發，格式為 `欄位:值`，多個條件用逗號分隔，例如 `index:3, role:system`。以字串比對，全部符合才算。 |
+| `target` | 必填 | B 的選擇器。B 可以先加 `hidden`，觸發時自動顯示。 |
+| `do` | `play` | `play`、`next`、`reset`、`show`、`hide`、`scroll`、`feed`（見下方「把輸入送進元件」），或 B 身上任何方法名稱。 |
+| `call` | 不設 | 改為呼叫全域函式，例如 `BpPopnote.fold`。B 當第一個參數傳入，並取代 `do`（B 只會先顯示）。 |
+| `call-arg` | 不設 | 傳給 `call` 函式的第二個參數，`true`、`false`、數字會轉型，其餘為字串。 |
+| `delay` | `0` | A 觸發後等多久才開始（ms）。 |
+| `exit` | `none` | A 的退場：`none`、`hide`、`fade`、`collapse`、`remove`。 |
+| `exit-speed` | `400` | `fade`、`collapse` 的時間（ms）。 |
+| `exit-gap` | `0` | A 消失後，等多久 B 才開始（ms）。 |
+| `in-place` | 不設 | B 移到 A 原本的位置，A 被刪除也可以。 |
+| `enter` | `fade` | B 原本隱藏時的進場效果：`fade`、`slide-up`、`slide-down`、`zoom`、`pop`、`none`。 |
+| `enter-speed` | `500` | 進場時間（ms）。 |
+| `swap` | 不設 | `zoom` 或 `flip`：A 縮小或翻走並刪除，B 在原位登場；A 的高度同步過渡到 B 的高度，版面不會跳動。設定後忽略 `exit`、`exit-gap`、`enter`，B 一律回到 A 的位置（`in-place="false"` 可關閉）。 |
+| `swap-speed` | `800` | swap 整段時間（ms），A 退場與 B 登場各占一半。 |
+| `countdown` | 不設 | 倒數起始值，例如 `3` 會顯示 3、2、1。覆蓋層蓋住整個 A（A 捲動或改變大小都跟得上），數完才退場或 swap；可搭配任何 `exit`。 |
+| `countdown-interval` | `1000` | 每個數字停留的時間（ms）。 |
+| `countdown-size` | `120` | 圓圈直徑（px），最大不超過 A 較短邊減 16。 |
+| `countdown-width` | `6` | 圓圈外框粗細（px）。 |
+| `countdown-color` | `key` | 圓圈外框與數字的顏色，色票名稱或色碼。 |
+| `countdown-bg` | `background` | 圓圈內的底色。 |
+| `countdown-cover` | `background` | 蓋住 A 的覆蓋層底色。 |
+| `countdown-font-size` | 圓圈的一半 | 數字字級（rem），預設依圓圈大小自動計算。 |
+| `once` | `true`（`do="feed"` 為 `false`） | 只觸發一次；`false` 則每次都觸發。 |
+| `item` | 不設 | 只用於 `do="feed"`：JSON，補充或覆蓋 `add()` 的欄位，例如 `{"likes":12}`、`{"from":"teacher"}`。 |
+| `feed-as` | `html` | 只用於 `do="feed"`：`html` 用轉好的 HTML、`text` 用純文字、`markdown` 用原始 Markdown 文字。 |
+| `template` | 不設 | 只用於 `do="feed"`：把輸入代入該 `<template>`，填進 B 容器。 |
+| `feed-mode` | `replace` | 搭配 `template`：`replace` 先清空 B 再填入，`append` 接在後面。 |
+
+## 把輸入送進元件（do="feed"）
+
+`do="feed"` 把事件 `detail` 裡的輸入內容送進 B，適合 `md-editor` 的 `md-submit`，也適用任何 `detail` 有 `value` 的事件（例如 `ui-blank` 的 `blank-submit`、`ui-otp` 的 `otp-complete`，內容會當作純文字跳脫）。
+
+```html
+<md-editor id="ed" name="Amy"></md-editor>
+<ui-post id="po" mode="live">…</ui-post>
+<ui-stream id="st" mode="live"></ui-stream>
+<div id="stage" hidden></div>
+
+<link-when source="#ed" event="done" target="#po" do="feed"></link-when>
+<link-when source="#ed" event="done" target="#st" do="feed" item='{"from":"teacher"}'></link-when>
+<link-when source="#ed" event="done" target="#stage" do="feed" template="#tpl"></link-when>
+```
+
+- B 是 `ui-post`（需 `mode="live"`）或 `ui-stream`：呼叫 `add()`。作者與名稱用 `detail.name`（`md-editor` 的 `name` 屬性），`ui-post` 沒有時是「我」，`ui-stream` 預設角色是 `student`。其他有 `add()` 的元件也可以。
+- 寫了 `template`：代入記號 `{html}`（轉好的 HTML）、`{text}`、`{markdown}`（同 `{value}`）、`{name}`，除 `{html}` 外一律跳脫成純文字，所以可以放進屬性，例如 `<note-fx text="{text}">`。`ui-play` 只在建立時讀劇本，用這個方式填進容器。
+- 沒寫 `template` 時，若事件 `detail.data` 是選擇器（例如 `ui-stream` 的 `ui-stream:badge`，`data` 是訊息的 `data-chart`），就複製它指向的 `<template>`（或元素）填進 B；後者會去掉 `id` 與 `hidden`。`feed-mode` 同樣控制取代或疊加。
+- 每次送出都會處理（`once` 預設 `false`）。連續送出會排隊，依送出順序一個一個處理，B 的 `hidden` 會在第一次自動顯示。
+- 沒有事件可用時（呼叫 `el.fire()`），會直接向 A 讀取 `value`、`html`、`text`。
+
+## `event="done"` 對照
+
+| 元件 | 事件 |
+| --- | --- |
+| `ui-play` | `play-end` |
+| `ui-stream` | `ui-stream:done` |
+| `ui-blank` | `mode="cli"` 為 `cli-end`，其他為 `blank-submit` |
+| `ui-detail-ladder` | `ladder-end` |
+| `bp-stepper` | `bps:complete` |
+| `ui-steps` | `steps:end` |
+| `sentence-build` | `sb:complete` |
+| `chunk-demo` | `chunk-end` |
+| `ui-timeline` | `timeline-end` |
+| `arrow-flow` | `flow-complete` |
+| `slider-show` | `finished` |
+| `ui-layer-diff` | `layerend` |
+| `dino-deck` | `dino:done` |
+| `ui-drag-ans` | `drag-ans:complete` |
+| `ui-post` | `post-end` |
+| `ui-screen` | `ui-screen:end` |
+| `maze-quiz` | `maze-solved`；有 `show-template` 時為 `template-shown`（template 內容顯示後） |
+| `tetris-quiz` | `tetris-cleared`（棋盤完全消除）；有 `show-template` 時為 `template-shown`（template 內容顯示後） |
+| `ui-check` | `ui-check-done` |
+| `ui-icon-anim` | `anim-end` |
+| `ui-fillin` | `fillin-submit`（送出即觸發，不分對錯） |
+| `md-editor` | `md-submit`（送出時，`detail` 有 `markdown`、`html`、`text`、`name`） |
+| `ui-mask` | `mask-reveal` |
+| `route-map` | `route-map:train-end`（只有火車跑完、`completed` 為 `true` 才觸發；被 `stop()` 中斷不算） |
+
+## 事件與方法
+
+| 名稱 | 說明 |
+| --- | --- |
+| `link-when:start`、`link-when:done` | 串接開始與結束，`detail` 為 `{ source, target }`，會冒泡。 |
+| `link-when:countdown` | 倒數每顯示一個數字就觸發，`detail` 為 `{ value, source }`，會冒泡。 |
+| `el.fire()` | 手動觸發，與事件發生時相同。 |
+| `window.LinkWhen.doneEvents`、`window.LinkWhen.doneDetail` | 上表的對照資料；`doneDetail` 是 `event="done"` 自動附加的 `detail` 條件（目前只有 `route-map`）。 |
+
+## 載入
+
+```html
+<script src="lw/link-when.js"></script>
+```
+
+`<link-when>` 只負責串接，A 與 B 各自的 `.js` 仍要另外載入。
+
+## 授權
+
+本專案以 MIT 授權釋出。
+
+```
+MIT License
+
+Copyright (c) 2026 studyadvice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

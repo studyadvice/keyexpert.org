@@ -1,0 +1,334 @@
+# ink-pen.js 與 dot-go.js
+
+螢幕錄影教學用的極簡畫筆層與跳轉圓點。兩支檔案都零依賴，各自單檔即可運作，可以分開使用，也可以一起使用。
+
+| 檔案 | 標籤 | 用途 |
+|---|---|---|
+| `ink-pen.js` | `<ui-ink-layer>`、`<ui-ink-bar>`、`<ink-handwrite>` | 觸控筆、雷射筆、行內手寫填空、NG 標記 |
+| `dot-go.js` | `<dot-go>` | 跳轉圓點與簡報式轉場（11-11-26 從 `ink-pen.js` 拆出） |
+
+適合用觸控筆在網頁教材上邊講解邊標註，錄成教學影片。元件不會在畫面上跳出任何提示訊息，設定錯誤只寫入主控台，避免錄影時出現干擾畫面的東西。
+
+## 功能
+
+- **全頁繪圖層**：觸控筆支援壓感，雷射筆帶殘影；筆跡可固定在視窗或跟著內容捲動。
+- **迷你工具列**：平時收合成一顆小圓鈕，可切換模式、筆色與粗細。
+- **行內手寫空格**：點一下開啟手寫視窗，寫完的筆跡自動裁切後填回空格，可附解答。
+- **跳轉圓點**（`dot-go.js`）：開著觸控筆也點得到，可跳到同頁標籤或其他網頁，支援 SVG 圖形、Bootstrap Icons 與簡報式轉場。
+- **NG 標記**：錄影中說錯了不必停下來，按快捷鍵讓整頁出現紅色遮罩 2 秒，同時記下時間點，剪輯時對照遮罩與清單即可找到要剪的位置。
+- **快捷鍵**：錄影時不必伸手找按鈕。
+
+## 快速開始
+
+```html
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <script src="ink-pen.js"></script>
+  <script src="dot-go.js"></script>
+</head>
+<body>
+  <ui-ink-layer></ui-ink-layer>
+  <ui-ink-bar></ui-ink-bar>
+
+  <h2 id="part2">Part 2</h2>
+  <p>Describe a time when you <ink-handwrite answer="helped">________</ink-handwrite> someone.</p>
+
+  <dot-go href="#part2" theme="pink" dot-style="star-fill">Part 2</dot-go>
+</body>
+</html>
+```
+
+按 `Ctrl+Shift+1` 開啟觸控筆，按 `` Ctrl+Shift+` `` 回到一般點選。
+
+只用畫筆的頁面不必載入 `dot-go.js`；只要跳轉圓點的頁面也不必載入 `ink-pen.js`。兩支檔案的載入順序不拘，但用到跨頁轉場時，`dot-go.js` 要放在 `<head>`。
+
+### 從舊版升級
+
+11-11-26 之前，`<dot-go>` 與轉場內建在 `ink-pen.js`。升級後，用到 `<dot-go>` 的頁面多載入一行 `dot-go.js` 即可，其餘寫法不變：
+
+- `InkPen.dots()`、`InkPen.transition()` 等介面，在兩支都載入時照常可用；新寫法是 `DotGo.dots()`、`DotGo.transition()`。
+- 寫在 `<ui-ink-bar>` 或 `<ui-ink-layer>` 上的 `data-transition` 全頁預設照常有效。
+- 只有自訂 CSS 覆寫轉場時要注意：`html[data-ip-vt]` 改名為 `html[data-dg-vt]`，`--ip-vt-ms` 改名為 `--dg-vt-ms`。
+
+## 元件
+
+### `<ui-ink-layer>` 全頁繪圖層
+
+覆蓋整個視窗的畫布，關閉時不攔截任何點擊。
+
+| 屬性 | 值 | 說明 |
+|---|---|---|
+| `data-anchor` | `viewport`（預設）、`document` | `viewport` 讓筆跡貼著視窗；`document` 讓筆跡貼著內容，捲動時跟著段落走 |
+| `data-lock-scroll` | 不寫（預設）、`true`、`pen`、`false` | 繪圖時鎖定頁面捲動。`true` 或空值在觸控筆與雷射筆模式都鎖定；`pen` 只在觸控筆模式鎖定；不寫或 `false` 不鎖定 |
+
+兩種模式可隨時切換，既有筆跡會依當下捲動量自動換算座標，切換瞬間畫面不會跳動。
+
+鎖定捲動期間，滾輪、觸控拖曳、方向鍵、PageUp、PageDown、空白鍵與拖曳捲軸都無效，按工具列的「關」才能再捲動。`document` 模式在鎖定時，手指拖曳改為作畫。唯一例外是 `<dot-go>` 的同頁跳轉（需載入 `dot-go.js`），仍會平滑捲動到目標。
+
+```html
+<ui-ink-layer data-anchor="document" data-lock-scroll="pen"></ui-ink-layer>
+```
+
+繪圖時的觸點分工：
+
+- 一次只追蹤一個作畫的觸點，畫到一半手掌碰到螢幕，不會混進同一筆。
+- 觸控筆離開螢幕後 0.6 秒內的手指觸碰一律忽略，防止手掌誤觸。
+- `document` 模式下，手指拖曳會捲動頁面，觸控筆與滑鼠負責作畫；`viewport` 模式下，手指也會作畫。
+- 移動時讀取瀏覽器合併的事件點，筆走得快也不會斷線或變成折線。
+
+| 方法 | 說明 |
+|---|---|
+| `setMode(mode)`、`getMode()` | `pen`、`laser`、`off` |
+| `setColor(key)`、`getColor()` | 配色表名稱或色碼 |
+| `setWidth(px)`、`getWidth()` | 筆跡粗細，範圍 3 至 12，預設 3 |
+| `setAnchor(mode)`、`getAnchor()` | 切換座標模式 |
+| `setScrollLock(v)`、`getScrollLock()` | 設定或讀取捲動鎖定規則，`v` 為 `true`、`'pen'` 或 `false`；讀取值為 `all`、`pen`、`none` |
+| `isScrollLocked()` | 目前是否正在鎖定捲動 |
+| `allowScroll(ms)` | 鎖定期間暫時放行程式端捲動，預設 700 毫秒，`dot-go.js` 的同頁跳轉會呼叫 |
+| `clear()` | 清除全部筆跡 |
+| `isEmpty()` | 是否沒有任何筆跡 |
+
+觸控筆有壓感時線寬會隨壓力變化，滑鼠則維持固定寬度。
+
+### `<ui-ink-bar>` 迷你工具列
+
+| 屬性 | 值 | 說明 |
+|---|---|---|
+| `data-pos` | `br`（預設）、`bl`、`tr`、`tl` | 擺放位置 |
+| `data-open` | `true` | 載入時直接展開，預設收合 |
+| `extra-color` | `#RGB`、`#RRGGBB` | 追加一個自訂筆色，載入時自動選用 |
+| `extra-label` | 文字 | 自訂筆色的顯示名稱，省略時顯示色碼 |
+| `data-ng-mask-ms` | 毫秒數，預設 `2000` | NG 紅色遮罩顯示多久 |
+| `data-ng-offset` | 秒數，預設 `3` | 每筆 NG 標記往前推幾秒，當作剪輯起點的保險 |
+| `data-ng-start-offset` | 秒數，預設 `3` | 計時開始時間往前推幾秒 |
+
+| 方法 | 說明 |
+|---|---|
+| `setMode(mode)` | 切換模式並同步按鈕狀態 |
+| `ngStart()`、`ngStop()`、`ngToggle()` | 開始、結束或切換 NG 計時 |
+| `ngMark()` | 顯示紅色遮罩，計時中同時記下時間點，回傳經過毫秒；未計時回傳 `null` |
+| `ngText()` | 取得純文字清單 |
+| `ngClear()` | 清空 NG 紀錄 |
+| `ngOpenPanel()` | 開啟清單視窗 |
+| `ngIsRecording()` | 是否計時中 |
+| `toggleBar(force)` | 收合或展開，不帶參數時切換 |
+| `setExtraColor(hex, label)` | 程式端追加或更換自訂色，傳空值則移除 |
+| `setAnchor(mode)`、`getAnchor()` | 繪圖層座標模式的便捷入口 |
+| `clear()` | 清除繪圖層筆跡 |
+
+#### NG 標記
+
+用 OBS 錄影時，說錯了又不想中斷、也不想刻意沉默五秒，就用這個功能。
+
+1. 按工具列的「錄」或 `Ctrl+Shift+3` 開始計時。
+2. 錄影中說錯了，按 `Ctrl+Shift+4`，整頁出現紅色遮罩 2 秒，遮罩會錄進影片當作記號，可以繼續講課。
+3. 錄完按「停」或再按一次 `Ctrl+Shift+3`，按「清單」檢視、複製或下載純文字清單。
+
+遮罩使用色票的 urgent，不攔截任何點擊，所以畫筆與其他操作不受影響。未開始計時就按 NG 只會顯示遮罩，不會記下時間點。
+
+清單以按下「錄」那一刻為 `00:00.0`，每筆標記與開始時間都往前推 3 秒當保險，不足 0 以 `00:00.0` 計：
+
+```
+ink-pen NG 標記清單
+開始計時：2026-11-10 14:00:08（前推 3 秒：2026-11-10 14:00:05）
+結束計時：2026-11-10 14:08:21，總長 08:13.0
+時間以按下「錄」那一刻為 00:00.0，每筆標記前推 3 秒，不足 0 以 00:00.0 計。
+
+開始    按鍵 00:00.0    建議剪輯點 00:00.0
+NG 01  按鍵 03:27.4    建議剪輯點 03:24.4
+NG 02  按鍵 06:51.0    建議剪輯點 06:48.0
+```
+
+時間只是粗定位，精準的剪輯點請以影片中的紅色畫面為準。
+
+每次開始、標記、結束都會立刻寫入 `localStorage`（鍵名 `ink-pen:ng-session`），網頁重新整理或意外關閉也不會遺失，重新整理時若計時尚未結束，會接著計時。開始新一輪計時會取代舊紀錄，需要的話請先複製或下載。
+
+### `<ink-handwrite>` 行內手寫空格
+
+```html
+<ink-handwrite>__________</ink-handwrite>
+<ink-handwrite answer="particularly">____________</ink-handwrite>
+<ink-handwrite data-slots="16"></ink-handwrite>
+```
+
+| 屬性 | 說明 |
+|---|---|
+| 標籤內底線 | 底線數量決定空格寬度，半形 `_` 與全形 `＿` 皆可 |
+| `data-slots` | 直接指定格數，優先於底線 |
+| `answer` | 解答文字。設定後空格右側會出現小圓點，點擊可顯示或收起解答 |
+
+格數範圍 8 至 255，超出會自動收斂。沒寫底線也沒設 `data-slots` 時，以答案長度推算，再沒有則用 10 格。
+
+解答比空格長時會等比縮小，下限 0.6 倍，縮到下限仍放不下會在主控台提醒加長底線。顯示解答會覆蓋該空格的手寫筆跡。
+
+| 方法 | 說明 |
+|---|---|
+| `setInk(dataUrl)`、`getInk()`、`hasInk()`、`clearInk()` | 存取手寫筆跡圖片 |
+| `showAnswer()`、`hideAnswer()`、`toggleAnswer()` | 控制解答顯示 |
+| `hasAnswer()`、`answerShown()` | 查詢解答狀態 |
+| `slots`、`answer` | 唯讀屬性 |
+
+### `<ui-ink-modal>` 手寫視窗
+
+第一次需要時自動建立，不必手動放置。畫布比例會貼近目標空格，寫完按「確認填入」後，筆跡裁切成最小外框再以圖片填回空格。確認時沒有書寫，等同清空該空格。
+
+筆跡粗細範圍 4 至 24，預設 10。色彩選單會跟著工具列，包含 `extra-color` 自訂色。
+
+## 事件
+
+所有事件都會冒泡，可在 `document` 統一監聽。
+
+| 事件 | 觸發時機 | `detail` |
+|---|---|---|
+| `ink-written` | 手寫視窗確認填入 | `{ el, dataUrl, empty, slots }` |
+| `ink-answer` | 解答顯示或收起 | `{ el, shown, answer, slots }` |
+| `dot-go` | 跳轉前，可 `preventDefault()` 取消（`dot-go.js`） | `{ el, href, internal, target }` |
+| `ink-scroll-lock` | 捲動鎖定狀態改變 | `{ locked, rule, mode }` |
+
+```js
+document.addEventListener('dot-go', function (e) {
+  if (e.detail.href === '#draft') e.preventDefault();
+});
+```
+
+## 全域介面 `window.InkPen`
+
+| 成員 | 說明 |
+|---|---|
+| `layer()`、`bar()`、`modal()` | 取得各元件實體 |
+| `lockScroll(v)` | 設定捲動鎖定，`true`、`'pen'` 或 `false`，等同修改 `data-lock-scroll` |
+| `shortcuts` | 快捷鍵對照表，含模式切換與 NG 標記 |
+| `ng` | NG 標記：`start()`、`stop()`、`toggle()`、`mark()`、`clear()`、`text()`、`isRecording()`、`startedAt()`、`openPanel()` |
+| `blanks()` | 頁面上所有 `<ink-handwrite>` |
+| `answerBlanks()` | 有設定 `answer` 的空格 |
+| `clearBlanks()` | 清除所有空格的手寫筆跡 |
+| `showAnswers(on)` | 顯示或收起所有解答 |
+| `toggleAnswers()` | 只要還有沒顯示的就全部顯示，否則全部收起 |
+| `palette`、`penColorOptions` | 配色表與筆色選單 |
+| `widthRange`、`handwriteRange`、`slotRange` | 各項數值範圍 |
+
+## dot-go.js
+
+### `<dot-go>` 跳轉圓點
+
+```html
+<script src="dot-go.js"></script>
+```
+
+```html
+<dot-go href="#part2" theme="blue" dot-style="star-fill">Part 2</dot-go>
+<dot-go href="lesson-02.html" theme="pink" dot-style="square">下一課</dot-go>
+<dot-go href="#part3" theme="blue" dot-style="icon" icon="bi-translate">翻譯練習</dot-go>
+<dot-go href="https://www.ielts.org/" dot-style="icon" icon="bi-box-arrow-up-right" target="_blank"></dot-go>
+```
+
+圓點的層級高於 `ink-pen.js` 的繪圖層，所以在觸控筆或雷射筆模式下，筆尖點到圓點一樣會跳轉，不會被畫成一筆。沒有載入 `ink-pen.js` 時，圓點照常運作。
+
+| 屬性 | 值 | 預設 | 說明 |
+|---|---|---|---|
+| `href` | `#id` 或網址 | 無 | `#id` 為同頁平滑捲動，並讓目標閃一下外框；其餘當網址跳轉。未設定時圓點停用 |
+| `theme` | 配色表名稱、`#RGB`、`#RRGGBB` | `blue` | 圖示與標籤顏色。可用名稱：`bg`、`shell`、`violet`、`blue`、`energetic`、`dreamy`、`green`、`vanilla`、`yellow`、`indigo`、`pink`、`red`、`gray`、`key`、`bg-alternative`、`calm`、`quiet`、`playful`、`urgent`。 |
+| `dot-style` | `circle`、`circle-fill`、`star`、`star-fill`、`square`、`square-fill`、`icon` | `circle-fill` | 圖示樣式 |
+| `icon` | Bootstrap Icons 名稱 | 無 | `dot-style="icon"` 時使用，寫 `bi-translate`、`translate` 或 `bi bi-translate` 皆可 |
+| `size` | 10 至 48 | 18 | 圖示大小（px） |
+| `target` | `_blank` | 同分頁 | 另開分頁 |
+| `offset` | 數字 | 16 | 同頁跳轉時保留的上方距離（px），給固定頁首用 |
+| `clear-ink` | 布林屬性 | 不清除 | 跳轉前先清除繪圖層筆跡（需載入 `ink-pen.js`） |
+| `transition` | 見下方轉場清單 | 無 | 跳轉時播放簡報式轉場（11-11-26 新增）。不寫或寫 `none` 時維持原本的平滑捲動 |
+| `transition-ms` | 150 至 3000 | 600 | 轉場時間（毫秒） |
+| `transition-edge` | 品牌色名稱或色碼 | 無 | 移動中畫面邊緣的亮色線，深色背景切換時讓動態更明顯 |
+
+標籤內的文字會顯示在圖示右側當標籤，留空則只顯示圖示。
+
+使用 `dot-style="icon"` 時，若頁面還沒引入 Bootstrap Icons，元件會自動從 jsDelivr 載入一次；已引入則不重複載入。缺少 `icon` 屬性時退回 `circle-fill`。
+
+### 轉場（View Transitions API）
+
+瀏覽器先拍下舊畫面，換成新畫面後在兩者之間做動畫，新舊畫面會同時出現，效果接近簡報切換投影片。
+
+```html
+<dot-go href="#part2" transition="cube" transition-edge="key">下一段</dot-go>
+<dot-go href="lesson-02.html" transition="push-left" transition-ms="800">下一課</dot-go>
+
+<!-- 全頁預設：寫在 <body>、工具列或繪圖層上，<dot-go> 自己的屬性優先 -->
+<body data-transition="push" data-transition-edge="key">
+<ui-ink-bar data-transition="push" data-transition-edge="key"></ui-ink-bar>
+```
+
+| 種類 | 效果 |
+|---|---|
+| `fade` | 交叉淡化 |
+| `push`、`push-left`、`push-right`、`push-up`、`push-down` | 新畫面把舊畫面推出去 |
+| `cover`、`cover-*` | 新畫面滑入蓋住舊畫面 |
+| `uncover`、`uncover-*` | 舊畫面滑走，露出新畫面 |
+| `zoom-in`、`zoom-out` | 新畫面從小放大，或舊畫面縮小離開 |
+| `flip`、`flip-*` | 以畫面中線為軸 3D 翻轉 |
+| `cube`、`cube-*` | 立方體旋轉 |
+| `morph` | 其餘畫面交叉淡化，只讓 `data-morph` 元素移動變形 |
+
+- **方向**：`push`、`cover`、`uncover`、`flip`、`cube` 不寫方向時自動判斷。同頁往下跳時新畫面從下方進來，往上跳時從上方進來；跨頁一律從右邊進來。
+- **轉化**：新舊兩處的對應元素加上相同的 `data-morph="名稱"`，轉場時會從舊位置移動並變形到新位置，任何種類都能搭配。
+- **深色背景**：兩個深色畫面互相淡化幾乎看不出來，建議選推入、覆蓋、翻轉、立方體這類靠位移的效果，並加上 `transition-edge`。
+- **跨頁轉場**：出發頁與目的頁都要在 `<head>` 裡載入 `dot-go.js`，且兩頁同網域。放在 `</body>` 前的話，目的頁來不及在第一次繪製前宣告轉場，會直接換頁，console 也會提示。只有從 `<dot-go>` 出發的換頁會播放，一般連結、上一頁與重新整理都維持原狀。
+- **固定介面**：同時使用 `ink-pen.js` 時，工具列與 NG 遮罩不參與轉場，停在原位。
+- **支援度**：同頁需要 Chrome、Edge 111 或 Safari 18 以上，跨頁需要 Chrome、Edge 126 或 Safari 18.2 以上。不支援時直接照原本方式跳轉，不會出錯。錄影建議用 Chrome 或 Edge。
+
+| 方法 | 說明 |
+|---|---|
+| `go()` | 以程式觸發跳轉 |
+| `href`、`internal`、`dotStyle`、`size`、`color` | 唯讀屬性 |
+
+### 全域介面 `window.DotGo`
+
+| 成員 | 說明 |
+|---|---|
+| `dots()` | 頁面上所有 `<dot-go>` |
+| `dotStyles` | 支援的圖示樣式清單 |
+| `transitions` | 支援的轉場種類清單 |
+| `transitionSupport` | 瀏覽器支援狀況 `{ sameDocument, crossDocument }` |
+| `transition(name, fn, opts)` | 自訂換畫面時套用轉場，`fn` 負責實際換畫面；`opts` 可給 `ms`、`edge`、`direction`、`scope` |
+| `palette` | 配色表 |
+
+兩支檔案都載入時，以上介面除了 `palette` 也會掛到 `window.InkPen`，舊頁面的寫法不必修改。
+
+
+## 快捷鍵
+
+組合鍵以實體按鍵位置判斷，不受輸入法影響，游標停在輸入框裡也有效。其餘單鍵在手寫視窗或 NG 清單視窗開啟時，或游標停在輸入框內時不會作用。
+
+| 按鍵 | 功能 |
+|---|---|
+| `Ctrl+Shift+1` | 觸控筆 |
+| `Ctrl+Shift+2` | 雷射筆 |
+| `` Ctrl+Shift+` `` | 關閉繪圖，回到一般點選 |
+| `Ctrl+Shift+3` | 開始或結束 NG 計時 |
+| `Ctrl+Shift+4` | 標記 NG（紅色遮罩加記下時間點，按住不放不會重複標記） |
+| `C` | 清除全部筆跡 |
+| `H` | 收合或展開工具列 |
+| `A` | 顯示或收起全部解答 |
+| `Esc` | 關閉手寫視窗或 NG 清單視窗 |
+
+## 注意事項
+
+- **堆疊環境**：`<dot-go>` 與解答圓點靠 z-index 浮在繪圖層之上。若它們的祖先元素設了 `transform`、`filter`、小於 1 的 `opacity`，或 `position` 搭配 `z-index`，會建立新的堆疊環境，圓點可能被繪圖層蓋住。
+- **離線錄影**：`dot-style="icon"` 自動載入 Bootstrap Icons 需要網路。離線使用時，請把 Bootstrap Icons 的 CSS 與字型下載到本機，再用 `<link>` 引入，元件偵測到後就不會再連 CDN。
+- **圖示名稱**：Bootstrap Icons 名稱拼錯時會顯示空白，請到 [icons.getbootstrap.com](https://icons.getbootstrap.com/) 核對。
+- **Shadow DOM**：元件不使用 Shadow DOM，樣式以 `<style>` 注入 `<head>`，可直接用 CSS 覆寫。
+
+## 示範
+
+`ink-pen-demo-11-20-26.html` 與 `ink-pen.js`、`dot-go.js` 放在同一資料夾，用瀏覽器開啟即可。這個檔案合併了四個版本的範例（跳轉圓點、捲動鎖定與組合鍵、NG 標記、extra-color 與 `<dot-go>` 轉場），新的在上面，拆分前後的對照與兩支檔案的配合在 `dot-go-demo-11-11-26.html`。
+
+## 授權
+
+MIT License
+
+Copyright (c) 2026 studyadvice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

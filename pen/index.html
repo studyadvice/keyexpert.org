@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ink-pen 示範</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --c-bg: #0C0D0C;
+    --c-shell: #C6C7BD;
+    --c-violet: #B484E8;
+    --c-blue: #5DBAE8;
+    --c-warning: #EF6661;
+    --c-energetic: #B6FF00;
+    --c-blue: #5DBAE8;
+    --c-green: #71CD76;
+    --c-green: #71CD76;
+    --c-vanilla: #DBEDD8;
+    --c-yellow: #E3D322;
+    --c-focus: #DBEDD8;
+    --c-green: #71CD76;
+    --c-info: #778CE1;
+    --c-indigo: #778CE1;
+    --c-pink: #FF91D7;
+    --c-energetic: #B6FF00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 0 120px 0;
+    background: var(--c-bg);
+    color: var(--c-shell);
+    font-family: "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .page { width: 100%; max-width: 1480px; margin: 0 auto; padding: 48px 40px; }
+
+  .page-head { margin-bottom: 40px; }
+  .page-head h1 { font-size: 2.4rem; line-height: 1.3; margin: 0 0 12px 0; color: var(--c-focus); }
+  .page-head p { font-size: 1.05rem; margin: 0; color: #9A9B94; max-width: 880px; }
+  .page-head .meta { font-size: 0.85rem; color: #7E7F78; margin-top: 10px; }
+
+  .ver-nav { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  .ver-nav a {
+    font-size: 0.88rem; text-decoration: none; padding: 6px 14px; border-radius: 14px;
+    background: rgba(32, 33, 25, 0.92); border: 1px solid rgba(58, 59, 55, 0.9);
+    color: var(--c-shell);
+  }
+  .ver-nav a:hover { border-color: var(--c-blue); color: var(--c-blue); }
+
+  .section-title {
+    font-size: 1.25rem; line-height: 1.4; color: var(--c-green);
+    margin: 64px 0 20px 0; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(58, 59, 55, 0.9);
+  }
+  .version-band {
+    margin: 80px 0 24px 0; padding: 18px 24px; border-radius: 10px;
+    background: rgba(23, 24, 26, 0.94); border-left: 5px solid var(--c-indigo);
+  }
+  .version-band h2 { margin: 0 0 6px 0; font-size: 1.4rem; line-height: 1.3; color: var(--c-violet); }
+  .version-band p { margin: 0; font-size: 0.95rem; color: #9A9B94; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: start; }
+  .grid-2e { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+  .card {
+    background: rgba(23, 24, 26, 0.94);
+    border: 1px solid rgba(42, 43, 40, 0.9);
+    border-radius: 10px;
+    padding: 24px 28px;
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 1.05rem; line-height: 1.4; color: var(--c-blue); }
+  .card p { margin: 0 0 10px 0; font-size: 0.95rem; }
+  .card p:last-child { margin-bottom: 0; }
+  .card ul, .card ol { margin: 10px 0 0 0; padding-left: 22px; }
+  .card li { margin-bottom: 8px; font-size: 0.95rem; }
+  .card b { color: var(--c-blue); }
+
+  pre {
+    background: rgba(15, 16, 14, 0.95);
+    border: 1px solid rgba(42, 43, 40, 0.9);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--c-shell);
+    margin: 0;
+  }
+  pre.old { border-left: 4px solid rgba(154, 155, 148, 0.82); }
+  pre.new { border-left: 4px solid var(--c-green); }
+  .code-label { font-size: 0.85rem; color: #9A9B94; margin: 0 0 8px 0; }
+  .code-label.new { color: var(--c-green); }
+  code { font-size: 0.9em; color: var(--c-yellow); }
+
+  table.keys { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  table.keys th, table.keys td {
+    text-align: left; padding: 10px 14px;
+    border-bottom: 1px solid rgba(42, 43, 40, 0.9);
+  }
+  table.keys th { color: #9A9B94; font-size: 0.82rem; letter-spacing: 1px; font-weight: normal; }
+  table.keys kbd, kbd.inline {
+    display: inline-block; min-width: 32px; text-align: center;
+    padding: 4px 9px; border-radius: 6px;
+    background: rgba(32, 33, 25, 0.95);
+    border: 1px solid rgba(58, 59, 55, 0.9);
+    color: var(--c-yellow); font-size: 0.9rem;
+  }
+  kbd.inline { min-width: 0; padding: 2px 7px; }
+
+  /* 練習用的教材區塊，純靜態，不依賴其他元件 */
+  .material { padding: 8px 0; }
+  .material .q-title {
+    font-size: 1.1rem; line-height: 1.4; color: var(--c-green);
+    margin: 0 0 14px 0; letter-spacing: 1px;
+  }
+  .material .zh { font-size: 1rem; color: #9A9B94; margin: 0 0 12px 0; }
+  .material .en { font-size: 1.35rem; line-height: 1.5; color: var(--c-vanilla); margin: 0; }
+  .material .en u {
+    text-decoration: none; color: var(--c-focus);
+    border-bottom: 2px solid rgba(13, 165, 145, 0.86); padding-bottom: 2px;
+  }
+  .material + .material { margin-top: 44px; padding-top: 44px; border-top: 1px solid rgba(42, 43, 40, 0.9); }
+
+  .swatch-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .swatch-row span {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.85rem; padding: 6px 12px; border-radius: 14px;
+    background: rgba(15, 16, 14, 0.95); border: 1px solid rgba(42, 43, 40, 0.9);
+  }
+  .swatch-row i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+
+  .tip {
+    margin-top: 20px; font-size: 0.9rem; color: var(--c-energetic);
+    background: rgba(23, 24, 26, 0.94); border-left: 4px solid var(--c-energetic);
+    border-radius: 8px; padding: 14px 18px;
+  }
+
+  .demo-btn {
+    font-size: 0.9rem; line-height: 1.4; padding: 8px 16px; border-radius: 16px;
+    border: 1px solid rgba(58, 59, 55, 0.9); background: rgba(32, 33, 25, 0.92);
+    color: var(--c-shell); cursor: pointer; margin-right: 10px;
+  }
+  .demo-btn:hover { border-color: var(--c-blue); color: var(--c-blue); }
+  .demo-btn.on { background: var(--c-green); border-color: var(--c-green); color: #07211D; font-weight: 600; }
+  .state-line {
+    margin-top: 16px; font-size: 0.9rem; color: var(--c-focus);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .scroll-lab { margin-top: 20px; }
+  .scroll-lab .band {
+    padding: 56px 32px; border-radius: 10px; margin-bottom: 16px;
+    background: rgba(15, 16, 14, 0.95); border: 1px solid rgba(42, 43, 40, 0.9);
+  }
+  .scroll-lab .band p { margin: 0; font-size: 1.3rem; line-height: 1.5; color: var(--c-vanilla); }
+  .scroll-lab .band small { display: block; margin-top: 10px; font-size: 0.85rem; color: #7E7F78; }
+
+  .cloze { font-size: 1.4rem; line-height: 1.5; color: var(--c-vanilla); margin: 0 0 28px 0; }
+  .cloze:last-child { margin-bottom: 0; }
+  .cloze .zh { display: block; font-size: 0.95rem; color: #9A9B94; margin-bottom: 10px; line-height: 1.5; }
+  .log {
+    margin-top: 18px; font-size: 0.88rem; line-height: 1.5; color: var(--c-green);
+    background: rgba(15, 16, 14, 0.95); border: 1px solid rgba(42, 43, 40, 0.9);
+    border-radius: 8px; padding: 14px 18px; min-height: 64px;
+  }
+</style>
+<script src="ink-pen.js"></script>
+</head>
+<body>
+
+<!-- ===== 全頁各放一個實體即可，手寫視窗會自動建立 ===== -->
+<ui-ink-layer data-anchor="viewport"></ui-ink-layer>
+<ui-ink-bar data-pos="br" extra-color="#FFFFFF" extra-label="純白 white"></ui-ink-bar>
+
+<div class="page">
+
+  <header class="page-head">
+    <h1>ink-pen 極簡畫筆層</h1>
+    <p>螢幕錄影時的最小標註工具。只保留觸控筆、雷射筆、筆跡色彩、清除與收合，工具列預設是右下角一顆 40px 的小圓鈕，不會壓到錄影主體區。零依賴，單獨一支 js 丟進任何頁面就能用。</p>
+    <p class="meta">最新版本 v4　10-28-26</p>
+    <nav class="ver-nav">
+      <a href="#v1">v1　10-27-26</a>
+      <a href="#v2">v2　10-28-26　座標模式與自訂筆色</a>
+      <a href="#v3">v3　10-28-26　行內手寫空格</a>
+      <a href="#v4">v4　10-28-26　解答顯示</a>
+    </nav>
+  </header>
+
+  <h2 class="section-title">立刻試畫</h2>
+  <p style="margin:0 0 20px 0;font-size:0.95rem;color:#9A9B94">
+    按右下角圓鈕展開工具列，或直接按 <kbd class="inline">1</kbd> 開始畫。下面是兩段模擬教材，可以在上面劃線、圈重點。本頁的工具列已設定 <code>extra-color="#FFFFFF"</code>，所以預設筆色是純白。
+  </p>
+
+  <div class="card">
+    <div class="material">
+      <p class="q-title">Part 2　描述一個讓你印象深刻的地方</p>
+      <p class="zh">我想談談台南的一條老街。那裡的房子多半有上百年歷史，窄巷裡飄著麻油與線香的氣味。</p>
+      <p class="en">I'd like to describe an old street in Tainan, a place that has <u>stuck with me</u> ever since. Most of the houses there are well over a century old, and the narrow lanes are <u>steeped in</u> the smell of sesame oil and incense.</p>
+    </div>
+
+    <div class="material">
+      <p class="q-title">Part 3　科技對閱讀習慣的影響</p>
+      <p class="zh">我認為科技並沒有讓人讀得更少，而是改變了閱讀的形狀。</p>
+      <p class="en">Personally, I don't think technology has made people read less; it has <u>reshaped</u> the way we read. On my commute I'll quite happily <u>work through</u> a long article on my phone, but when it comes to <u>digesting</u> an entire book, I still <u>fall back on</u> print.</p>
+    </div>
+  </div>
+
+  <div class="tip">
+    雷射筆（<code>3</code>）要按住拖曳才會出現光跡，放開後約 0.6 秒淡出，不會留在畫面上。觸控筆（<code>1</code>）的筆跡會保留到按 <code>C</code> 清除為止。
+  </div>
+
+  <!-- ===================== v1 ===================== -->
+  <div class="version-band" id="v1">
+    <h2>v1　10-27-26</h2>
+    <p>觸控筆、雷射筆、筆跡色彩、粗細 3 至 12 px、清除、收合工具列。</p>
+  </div>
+
+  <h2 class="section-title">快捷鍵</h2>
+  <div class="grid-2">
+    <div class="card">
+      <table class="keys">
+        <tr><th style="width:120px">按鍵</th><th>功能</th></tr>
+        <tr><td><kbd>1</kbd></td><td>觸控筆，筆跡會保留在畫面上</td></tr>
+        <tr><td><kbd>3</kbd></td><td>雷射筆，拖曳時出現紅色光跡並自動淡出</td></tr>
+        <tr><td><kbd>0</kbd></td><td>關閉繪圖，回到一般點選與捲動</td></tr>
+        <tr><td><kbd>C</kbd></td><td>清除全部筆跡</td></tr>
+        <tr><td><kbd>H</kbd></td><td>收合或展開工具列</td></tr>
+        <tr><td><kbd>A</kbd></td><td>顯示或收起全部解答（v4）</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>關閉手寫視窗（v3）</td></tr>
+      </table>
+      <p style="margin-top:16px;font-size:0.88rem;color:#9A9B94">游標停在輸入框或下拉選單裡時，快捷鍵不會觸發，可以放心打字；手寫視窗開著時也只有 Esc 有效。</p>
+    </div>
+
+    <div class="card">
+      <h3>錄影時的小圓鈕狀態</h3>
+      <ul>
+        <li>圓鈕中心的小點會<b>顯示目前筆色</b>，一眼就知道待會畫出來是什麼顏色。</li>
+        <li>筆或雷射作用中時，圓鈕外圈會亮起<b>海洋藍光暈</b>，提醒你此時頁面無法點選。</li>
+        <li>工具列收合後，<code>1</code>、<code>3</code>、<code>0</code>、<code>C</code> 仍然有效，所以整段錄影其實可以不展開工具列。</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="section-title">筆跡色彩與粗細</h2>
+  <div class="card">
+    <p>下拉選單內建八個顏色，都取自既有配色表。雷射筆固定使用警示紅，不受這裡影響。</p>
+    <div class="swatch-row">
+      <span><i style="background:#DBEDD8"></i>霧白 focus</span>
+      <span><i style="background:#5DBAE8"></i>海洋藍 blue</span>
+      <span><i style="background:#E3D322"></i>黃 yellow</span>
+      <span><i style="background:#71CD76"></i>嫩綠 green</span>
+      <span><i style="background:#FF91D7"></i>粉紅 pink</span>
+      <span><i style="background:#FFA987"></i>蜜桃 playful</span>
+      <span><i style="background:#B484E8"></i>薰衣草 violet</span>
+      <span><i style="background:#5DBAE8"></i>天空藍 blue</span>
+    </div>
+    <p style="margin-top:18px">粗細輸入框範圍 3 至 12 px，預設 3。觸控筆若回報壓力值，線寬會依壓力在設定值的 0.35 至 1.85 倍之間浮動；用滑鼠畫則維持固定寬度。</p>
+  </div>
+
+  <h2 class="section-title">v1 頁面用法</h2>
+  <div class="grid-2">
+    <div>
+      <pre class="old">&lt;script src="ink-pen.js"&gt;&lt;/script&gt;
+
+&lt;!-- 全頁各放一個即可，位置任意 --&gt;
+&lt;ui-ink-layer&gt;&lt;/ui-ink-layer&gt;
+&lt;ui-ink-bar data-pos="br"&gt;&lt;/ui-ink-bar&gt;</pre>
+
+      <p class="code-label" style="margin-top:20px">工具列位置屬性</p>
+      <pre class="old">data-pos="br"      右下角（預設）
+data-pos="bl"      左下角
+data-pos="tr"      右上角
+data-pos="tl"      左上角
+
+data-open="true"   載入時直接展開工具列</pre>
+    </div>
+
+    <div>
+      <p class="code-label">程式介面 window.InkPen</p>
+      <pre class="old">InkPen.layer()            // 取得 &lt;ui-ink-layer&gt;
+InkPen.bar()              // 取得 &lt;ui-ink-bar&gt;
+InkPen.palette            // 配色表物件
+InkPen.penColorOptions    // 筆色選項
+InkPen.widthRange         // { min:3, max:12, def:3 }
+InkPen.showAlert(msg, 'info')
+
+// 直接操作繪圖層
+InkPen.layer().setMode('pen');   // pen / laser / off
+InkPen.layer().setColor('yellow');
+InkPen.layer().setWidth(6);
+InkPen.layer().clear();
+
+// 操作工具列（會連動按鈕外觀）
+InkPen.bar().setMode('laser');
+InkPen.bar().toggleBar(true);</pre>
+    </div>
+  </div>
+
+  <!-- ===================== v2 ===================== -->
+  <div class="version-band" id="v2">
+    <h2>v2　10-28-26</h2>
+    <p>新增 <code>data-anchor</code> 座標模式，筆跡可選擇固定在視窗或跟著內容捲動；新增 <code>extra-color</code> 自訂筆色。</p>
+  </div>
+
+  <h2 class="section-title">座標模式　data-anchor</h2>
+  <div class="grid-2e">
+    <div class="card">
+      <h3>viewport　貼著視窗（預設）</h3>
+      <p>筆跡以螢幕座標記錄，捲動頁面時筆跡留在原本的螢幕位置。適合畫面固定不動的錄影，或在單一畫面上做框線、箭頭這類不屬於某段文字的標記。</p>
+      <p style="margin-top:12px;color:#9A9B94;font-size:0.9rem">觸控時會完全鎖住捲動（<code>touch-action:none</code>），下筆最穩。</p>
+    </div>
+    <div class="card">
+      <h3>document　貼著內容</h3>
+      <p>筆跡以文件座標記錄，捲動頁面時筆跡跟著段落一起移動，可以邊捲邊畫，整頁講解完回頭捲上去，前面劃的線還在原來的句子上。</p>
+      <p style="margin-top:12px;color:#9A9B94;font-size:0.9rem">觸控時放行垂直捲動（<code>touch-action:pan-y</code>），用觸控筆橫向劃線、用手指上下捲；滑鼠滾輪在兩種模式下都能捲。</p>
+    </div>
+  </div>
+
+  <div class="card scroll-lab" style="margin-top:24px">
+    <h3>實際比較</h3>
+    <p>按 <kbd class="inline">1</kbd> 開筆，在下面三個色塊上各畫一條線，然後捲動頁面看看筆跡的行為；再切換模式重畫一次。切換當下畫面上的筆跡位置不會跳動，元件會依當時的捲動量換算座標。</p>
+    <p style="margin-top:14px">
+      <button type="button" class="demo-btn on" data-anchor-btn="viewport">貼著視窗 viewport</button>
+      <button type="button" class="demo-btn" data-anchor-btn="document">貼著內容 document</button>
+      <button type="button" class="demo-btn" id="demo-clear">清除筆跡</button>
+    </p>
+    <p class="state-line" id="anchor-state">目前模式：viewport</p>
+
+    <div class="scroll-lab" style="margin-top:24px">
+      <div class="band">
+        <p>She <u>brushed off</u> the criticism and carried on.</p>
+        <small>在這句上劃一條線，然後往下捲</small>
+      </div>
+      <div class="band">
+        <p>The policy was <u>rolled out</u> in stages across the region.</p>
+        <small>第二句</small>
+      </div>
+      <div class="band">
+        <p>Most of them <u>ended up</u> staying far longer than planned.</p>
+        <small>第三句，捲到這裡再回頭看前兩句的筆跡</small>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">自訂筆色　extra-color</h2>
+  <div class="grid-2e">
+    <div class="card">
+      <h3>用法</h3>
+      <p>在工具列加上 <code>extra-color</code>，色彩選單尾端就會多一個選項，並在載入時自動選用它。<code>extra-label</code> 可指定顯示名稱，省略時直接顯示色碼。</p>
+      <p style="margin-top:12px">接受 <code>#RGB</code> 與 <code>#RRGGBB</code> 兩種寫法，格式不符會跳出警示並沿用內建色彩，不會中斷其他功能。</p>
+      <p style="margin-top:14px">
+        <button type="button" class="demo-btn" data-extra="#FFFFFF" data-extra-label="純白 white">純白 #FFFFFF</button>
+        <button type="button" class="demo-btn" data-extra="#FF5C00" data-extra-label="螢光橘">螢光橘 #FF5C00</button>
+        <button type="button" class="demo-btn" data-extra="" data-extra-label="">移除自訂色</button>
+      </p>
+      <p class="state-line" id="extra-state">目前自訂色：#FFFFFF</p>
+    </div>
+    <div>
+      <p class="code-label new">v2 標籤寫法</p>
+      <pre class="new">&lt;ui-ink-layer data-anchor="document"&gt;&lt;/ui-ink-layer&gt;
+
+&lt;ui-ink-bar
+    data-pos="br"
+    extra-color="#FFFFFF"
+    extra-label="純白 white"&gt;&lt;/ui-ink-bar&gt;</pre>
+
+      <p class="code-label new" style="margin-top:20px">v2 新增介面</p>
+      <pre class="new">// 座標模式，兩邊都可以叫
+InkPen.layer().setAnchor('document');
+InkPen.layer().getAnchor();      // 'viewport' | 'document'
+InkPen.bar().setAnchor('viewport');   // 另外跳提示訊息
+
+// 自訂筆色，等同改屬性，選單即時重建
+InkPen.bar().setExtraColor('#FF5C00', '螢光橘');
+InkPen.bar().setExtraColor(null);     // 移除自訂色</pre>
+    </div>
+  </div>
+
+  <!-- ===================== v3 ===================== -->
+  <div class="version-band" id="v3">
+    <h2>v3　10-28-26　（v3.1、v3.2 修正）</h2>
+    <p>新增 <code>&lt;ink-handwrite&gt;</code> 行內手寫空格：底線長度決定空格寬度，點一下開手寫視窗，確認後筆跡填回空格。</p>
+    <p style="margin-top:10px">v3.1 修正三件事：元件在文件解析完才讀取底線長度，避免底線殘留與格數誤判；空格高度壓在 1.55em 以內，不會超出行框壓到上一行；筆跡改為絕對定位並加上 <code>overflow:hidden</code>，不會溢出到鄰近文字。</p>
+    <p style="margin-top:10px">v3.2 移除元件內所有畫面提示訊息，錄影時不會有東西跳出來；設定錯誤改寫入 console。<code>InkPen.showAlert</code> 一併移除，本頁的操作紀錄改由下方的紀錄區呈現。</p>
+  </div>
+
+  <h2 class="section-title">行內手寫空格　ink-handwrite</h2>
+
+  <div class="card">
+    <h3>直接試寫</h3>
+    <p style="margin-bottom:22px">每個空格都是獨立的。點空格上的筆圖示開啟手寫視窗，寫完按確認填入；再點一次會<b>從空白開始</b>重寫，不會接續上次的筆跡。確認時若畫布是空的，等同清空該空格。</p>
+
+    <p class="cloze">
+      <span class="zh">我想談談書法，那是我在暑假期間開始學的。</span>
+      I'd like to talk about <ink-handwrite answer="calligraphy">___________</ink-handwrite>, which I
+      <ink-handwrite answer="picked up">_________</ink-handwrite> during the summer break.
+    </p>
+
+    <p class="cloze">
+      <span class="zh">那條老街的窄巷裡飄著麻油與線香的氣味。</span>
+      The narrow lanes are <ink-handwrite answer="steeped in">__________</ink-handwrite> the smell of sesame oil
+      and <ink-handwrite answer="incense">_______</ink-handwrite>.
+    </p>
+
+    <p class="cloze">
+      <span class="zh">多數人最後待得比原本計畫的久很多。</span>
+      Most of them <ink-handwrite answer="ended up">________</ink-handwrite> staying far
+      <ink-handwrite answer="longer">_____</ink-handwrite> than planned, and nobody
+      <ink-handwrite answer="complained">_______________</ink-handwrite> about it.
+    </p>
+
+    <p style="margin-top:20px">
+      <button type="button" class="demo-btn" id="clear-blanks">清空所有空格</button>
+      <button type="button" class="demo-btn" id="count-blanks">統計已填入的空格</button>
+    </p>
+    <div class="log" id="write-log">每次確認填入都會在這裡留下紀錄，由 <code>ink-written</code> 事件提供。</div>
+  </div>
+
+  <div class="tip">
+    觸控筆或雷射筆開啟時，繪圖層會蓋住整頁，此時空格點不到。先按 <kbd class="inline">0</kbd> 關閉繪圖再點空格，這也是刻意的：錄影中在空格上劃線與開手寫視窗是兩件不同的事。
+  </div>
+
+  <div class="grid-2e" style="margin-top:28px">
+    <div class="card">
+      <h3>寬度怎麼決定</h3>
+      <p>元件讀取標籤內的底線數量，可辨識 <b>5 到 15 個</b>，不足 5 個補到 5，超過 15 個收到 15。寬度以 <code>ch</code> 計算，所以會跟著周圍文字的字級縮放，長句換行時空格也會一起排版。</p>
+      <p style="margin-top:12px">也可以用 <code>data-slots="12"</code> 直接指定格數，此時標籤內容寫什麼都不影響。全形底線 <code>＿</code> 同樣可辨識。</p>
+    </div>
+    <div class="card">
+      <h3>筆跡怎麼塞進空格</h3>
+      <p>手寫視窗的畫布會<b>依照目標空格的長寬比</b>調整，所以寫出來的字比例和填回去的樣子接近。</p>
+      <p style="margin-top:12px">確認時元件只取筆跡的<b>最小外框</b>再輸出 PNG，寫在畫布哪個位置都沒關係，不會在空格裡留下一大片空白。視窗內的筆較粗，預設 10 px、範圍 4 至 24，因為縮小後線條會變細。</p>
+    </div>
+  </div>
+
+  <h2 class="section-title">v3 用法與介面</h2>
+  <div class="grid-2e">
+    <div>
+      <p class="code-label new">標籤寫法，寫在行內文字中間即可</p>
+      <pre class="new">&lt;p&gt;
+  I'd like to talk about
+  &lt;ink-handwrite&gt;___________&lt;/ink-handwrite&gt;,
+  which I
+  &lt;ink-handwrite&gt;_________&lt;/ink-handwrite&gt;
+  during the summer break.
+&lt;/p&gt;
+
+&lt;!-- 直接指定格數，內容不拘 --&gt;
+&lt;ink-handwrite data-slots="12"&gt;&lt;/ink-handwrite&gt;
+
+&lt;!-- 手寫視窗會自動建立，不必自己放 --&gt;</pre>
+    </div>
+    <div>
+      <p class="code-label new">v3 新增介面</p>
+      <pre class="new">// 單一空格
+var blank = document.querySelector('ink-handwrite');
+blank.slots;          // 格數 5 至 15
+blank.hasInk();       // 是否已填入
+blank.getInk();       // PNG 的 dataURL 或 null
+blank.setInk(url);    // 直接塞入既有筆跡
+blank.clearInk();     // 清空
+
+// 整頁
+InkPen.blanks();      // 所有 &lt;ink-handwrite&gt;
+InkPen.clearBlanks(); // 全部清空
+InkPen.modal();       // 取得手寫視窗
+
+// 每次確認填入都會冒泡一個事件
+document.addEventListener('ink-written', function (e) {
+  e.detail.el;        // 哪個空格
+  e.detail.dataUrl;   // 筆跡圖，清空時為 null
+  e.detail.empty;     // 是否為清空
+  e.detail.slots;     // 該空格的格數
+});</pre>
+    </div>
+  </div>
+
+  <!-- ===================== v4 ===================== -->
+  <div class="version-band" id="v4">
+    <h2>v4　10-28-26</h2>
+    <p>新增 <code>answer</code> 屬性與解答顯示：空格右側長出一顆小圓點，點它顯示該格解答，<kbd class="inline">A</kbd> 一次切換全部。</p>
+  </div>
+
+  <h2 class="section-title">解答顯示　answer</h2>
+
+  <div class="card">
+    <h3>直接試</h3>
+    <p style="margin-bottom:18px">上面那三句教材的空格都已經加上 <code>answer</code>，每格右側都有一顆小圓點。點圓點顯示該格解答，再點一次收起；按 <kbd class="inline">A</kbd> 則是全部一起切換。圓點在解答顯示中會變成嫩綠色實心。</p>
+    <p>
+      <button type="button" class="demo-btn" id="show-answers">顯示全部解答</button>
+      <button type="button" class="demo-btn" id="hide-answers">收起全部解答</button>
+    </p>
+    <p style="margin-top:16px;font-size:0.95rem;color:#9A9B94">第三句的 <code>longer</code> 只給了 5 條底線，可以看到解答自動縮小塞進空格；<code>complained</code> 給了 15 條，則會以原字級顯示。</p>
+  </div>
+
+  <div class="tip">
+    解答顯示是<b>破壞性</b>的：該格原有的手寫筆跡會被丟掉，收起解答後空格回到空白的筆圖示，可以重寫。這是你指定的行為，等於「對完答案就翻篇」。
+  </div>
+
+  <div class="grid-2e" style="margin-top:28px">
+    <div class="card">
+      <h3>圓點為什麼在框外</h3>
+      <p>圓點放在空格右側外緣並垂直置中，不佔用書寫區域，也不會被空格的裁切範圍切掉。有寫 <code>answer</code> 的空格才會長出圓點，右側會自動多留 17px。</p>
+      <p style="margin-top:12px">圓點的 <code>z-index</code> 高於繪圖層，所以<b>筆或雷射開著時圓點仍然點得到</b>，不必先按 <kbd class="inline">0</kbd>。代價是每格少掉約 9px 的可繪圖面積。</p>
+    </div>
+    <div class="card">
+      <h3>解答放不下怎麼辦</h3>
+      <p>解答以單行不換行顯示，寬度超過空格時等比縮小，下限 0.6 倍。縮到下限仍放不下就會在 console 提醒你該格的底線給太短，但畫面上不會跳任何東西。</p>
+      <p style="margin-top:12px">若省略底線只寫 <code>answer</code>，格數直接由答案長度決定（一樣收斂在 5 到 15），省得數底線。</p>
+    </div>
+  </div>
+
+  <h2 class="section-title">v4 用法與介面</h2>
+  <div class="grid-2e">
+    <div>
+      <p class="code-label new">標籤寫法</p>
+      <pre class="new">&lt;ink-handwrite answer="conveniently"&gt;
+  ___________
+&lt;/ink-handwrite&gt;
+
+&lt;!-- 省略底線，格數由答案長度決定 --&gt;
+&lt;ink-handwrite answer="calligraphy"&gt;&lt;/ink-handwrite&gt;
+
+&lt;!-- 沒有 answer 就沒有圓點，A 鍵也不影響它 --&gt;
+&lt;ink-handwrite&gt;________&lt;/ink-handwrite&gt;</pre>
+    </div>
+    <div>
+      <p class="code-label new">v4 新增介面</p>
+      <pre class="new">// 單一空格
+blank.answer;         // 解答字串
+blank.hasAnswer();
+blank.answerShown();
+blank.showAnswer();   // 會丟掉該格手寫
+blank.hideAnswer();
+blank.toggleAnswer();
+
+// 整頁，只影響有 answer 的空格
+InkPen.answerBlanks();
+InkPen.showAnswers(true);
+InkPen.showAnswers(false);
+InkPen.toggleAnswers();   // A 鍵呼叫的就是這個
+
+// 切換時冒泡的事件
+document.addEventListener('ink-answer', function (e) {
+  e.detail.el;      // 哪個空格
+  e.detail.shown;   // true 顯示、false 收起
+  e.detail.answer;  // 解答字串
+  e.detail.slots;   // 該空格的格數
+});</pre>
+    </div>
+  </div>
+
+  <h2 class="section-title">版本標籤對照</h2>
+  <div class="grid-3">
+    <div>
+      <p class="code-label">v1</p>
+      <pre class="old">&lt;ui-ink-layer&gt;&lt;/ui-ink-layer&gt;
+&lt;ui-ink-bar data-pos="br"&gt;
+&lt;/ui-ink-bar&gt;
+
+&lt;!-- 筆跡一律貼著視窗 --&gt;
+&lt;!-- 筆色只有內建八色 --&gt;
+&lt;!-- 沒有行內手寫 --&gt;</pre>
+    </div>
+    <div>
+      <p class="code-label">v2</p>
+      <pre class="old">&lt;ui-ink-layer
+    data-anchor="document"&gt;
+&lt;/ui-ink-layer&gt;
+&lt;ui-ink-bar data-pos="br"
+    extra-color="#FFFFFF"
+    extra-label="純白 white"&gt;
+&lt;/ui-ink-bar&gt;
+
+&lt;!-- 沒有行內手寫 --&gt;</pre>
+    </div>
+    <div>
+      <p class="code-label new">v4（屬性全為選用）</p>
+      <pre class="new">&lt;ui-ink-layer
+    data-anchor="document"&gt;
+&lt;/ui-ink-layer&gt;
+&lt;ui-ink-bar data-pos="br"
+    extra-color="#FFFFFF"
+    extra-label="純白 white"&gt;
+&lt;/ui-ink-bar&gt;
+
+&lt;ink-handwrite
+    answer="conveniently"&gt;
+  ___________
+&lt;/ink-handwrite&gt;</pre>
+    </div>
+  </div>
+
+  <h2 class="section-title">設計取捨</h2>
+  <div class="grid-3">
+    <div class="card">
+      <h3>為什麼預設仍是視窗座標</h3>
+      <p>錄影時畫面多半固定不動，視窗座標的運算最少，觸控也能完全鎖住捲動，下筆不會誤觸發頁面滑動。需要長篇講解再切 <code>document</code>。</p>
+    </div>
+    <div class="card">
+      <h3>為什麼手寫視窗每次從空白開始</h3>
+      <p>照你的規格做。教學現場的實際需求是「寫錯就重來」，若保留上次筆跡，你得先判斷哪幾筆要留、哪幾筆要擦，反而比重寫一次慢。</p>
+    </div>
+    <div class="card">
+      <h3>為什麼筆跡存成圖片</h3>
+      <p>空格裡只需要顯示結果，存成裁切後的 PNG 最單純，可以直接塞進任何版面、跟著文字換行。需要原始點序列再另外擴充即可。</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ---------- 示範頁的控制按鈕，元件本身不含這些 ---------- */
+  var anchorState = document.getElementById('anchor-state');
+  var extraState = document.getElementById('extra-state');
+  var writeLog = document.getElementById('write-log');
+
+  document.querySelectorAll('[data-anchor-btn]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var mode = btn.getAttribute('data-anchor-btn');
+      window.InkPen.bar().setAnchor(mode);
+      document.querySelectorAll('[data-anchor-btn]').forEach(function (b) {
+        b.classList.toggle('on', b === btn);
+      });
+      anchorState.textContent = '目前模式：' + window.InkPen.layer().getAnchor();
+    });
+  });
+
+  document.getElementById('demo-clear').addEventListener('click', function () {
+    window.InkPen.bar().clear();
+  });
+
+  document.querySelectorAll('[data-extra]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var hex = btn.getAttribute('data-extra');
+      var label = btn.getAttribute('data-extra-label');
+      window.InkPen.bar().setExtraColor(hex || null, label || null);
+      extraState.textContent = '目前自訂色：' + (hex || '無');
+    });
+  });
+
+  /* ---------- 手寫空格的事件示範 ---------- */
+  document.addEventListener('ink-written', function (e) {
+    var all = window.InkPen.blanks();
+    var idx = all.indexOf(e.detail.el) + 1;
+    logLine('第 ' + idx + ' 個空格（' + e.detail.slots + ' 格寬）'
+      + (e.detail.empty ? ' 已清空' : ' 已填入筆跡'));
+  });
+
+  function logLine(text) {
+    var time = new Date().toLocaleTimeString('zh-Hant', { hour12: false });
+    var line = document.createElement('div');
+    line.textContent = time + '　' + text;
+    if (writeLog.firstChild && writeLog.firstChild.nodeType === 3) writeLog.innerHTML = '';
+    writeLog.insertBefore(line, writeLog.firstChild);
+  }
+
+  document.getElementById('clear-blanks').addEventListener('click', function () {
+    window.InkPen.clearBlanks();
+    logLine('所有空格已清空');
+  });
+
+  /* ---------- 解答切換 ---------- */
+  document.addEventListener('ink-answer', function (e) {
+    logLine('解答「' + e.detail.answer + '」' + (e.detail.shown ? '已顯示' : '已收起'));
+  });
+
+  document.getElementById('show-answers').addEventListener('click', function () {
+    window.InkPen.showAnswers(true);
+  });
+
+  document.getElementById('hide-answers').addEventListener('click', function () {
+    window.InkPen.showAnswers(false);
+  });
+
+  document.getElementById('count-blanks').addEventListener('click', function () {
+    var all = window.InkPen.blanks();
+    var done = all.filter(function (b) { return b.hasInk(); }).length;
+    logLine('已填入 ' + done + ' / ' + all.length + ' 個空格');
+  });
+</script>
+
+</body>
+</html>
